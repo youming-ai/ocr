@@ -27,10 +27,6 @@ const MIME_TYPES: Record<string, string> = {
 };
 
 const env = {
-  LLM_API_KEY: process.env['LLM_API_KEY'],
-  DEEPSEEK_API_KEY: process.env['DEEPSEEK_API_KEY'],
-  LLM_API_BASE_URL: process.env['LLM_API_BASE_URL'],
-  LLM_MODEL: process.env['LLM_MODEL'],
   PUBLIC_ORIGIN: process.env['PUBLIC_ORIGIN'] ?? `http://localhost:${PORT}`,
 };
 

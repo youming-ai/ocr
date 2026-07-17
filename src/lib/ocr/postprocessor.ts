@@ -10,25 +10,30 @@ export interface CtcResult {
 
 /**
  * Decode CTC output: argmax per timestep, collapse repeated, remove blanks.
- * @param logits - Array of [numClasses] per timestep
+ * Operates directly on a flat Float32Array of shape [seqLen, numClasses].
+ * @param data - Flat logits: timestep-major, each of length numClasses
+ * @param numClasses - Number of classes per timestep
  * @param dict - Character dictionary (index 0 = blank)
  */
-export function decodeCtc(logits: number[][], dict: string[]): CtcResult {
-  if (logits.length === 0) return { text: '', confidence: 0 };
+export function decodeCtc(data: Float32Array, numClasses: number, dict: string[]): CtcResult {
+  if (data.length === 0 || numClasses === 0) return { text: '', confidence: 0 };
+  const seqLen = Math.floor(data.length / numClasses);
+  if (seqLen === 0) return { text: '', confidence: 0 };
 
   let text = '';
   let totalConf = 0;
   let prevIdx = -1;
 
-  for (const logit of logits) {
-    // Find argmax
+  for (let t = 0; t < seqLen; t++) {
+    const offset = t * numClasses;
+    // Find argmax over this timestep
     let maxIdx = 0;
-    let maxVal = logit[0] ?? 0;
-    for (let i = 1; i < logit.length; i++) {
-      const val = logit[i] ?? 0;
+    let maxVal = data[offset] ?? 0;
+    for (let c = 1; c < numClasses; c++) {
+      const val = data[offset + c] ?? 0;
       if (val > maxVal) {
         maxVal = val;
-        maxIdx = i;
+        maxIdx = c;
       }
     }
 
@@ -103,6 +108,13 @@ function intersectionArea(
   return Math.max(0, x2 - x1) * Math.max(0, y2 - y1);
 }
 
+const NEIGHBOR_DIRECTIONS = [
+  [-1, 0],
+  [1, 0],
+  [0, -1],
+  [0, 1],
+];
+
 /**
  * Extract text bounding boxes from a DBNet probability map.
  *
@@ -151,12 +163,7 @@ export function extractBoxes(
         pixels.push(cx, cy);
 
         // 4-connected neighbors
-        for (const dir of [
-          [-1, 0],
-          [1, 0],
-          [0, -1],
-          [0, 1],
-        ]) {
+        for (const dir of NEIGHBOR_DIRECTIONS) {
           const nx = cx + (dir[0] ?? 0);
           const ny = cy + (dir[1] ?? 0);
           if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue;

@@ -5,31 +5,47 @@ describe('decodeCtc', () => {
   it('decodes simple sequence with blank collapse', () => {
     // Simulate: blank, 'A', 'A', blank, 'B', blank
     const dict = ['', 'A', 'B', 'C'];
-    const logits = [
-      [1, 0, 0, 0], // blank
-      [0, 1, 0, 0], // A
-      [0, 1, 0, 0], // A (duplicate — collapsed)
-      [1, 0, 0, 0], // blank
-      [0, 0, 1, 0], // B
-      [1, 0, 0, 0], // blank
-    ];
-    const result = decodeCtc(logits, dict);
+    const numClasses = dict.length;
+    const logits = new Float32Array([
+      1,
+      0,
+      0,
+      0, // blank
+      0,
+      1,
+      0,
+      0, // A
+      0,
+      1,
+      0,
+      0, // A (duplicate — collapsed)
+      1,
+      0,
+      0,
+      0, // blank
+      0,
+      0,
+      1,
+      0, // B
+      1,
+      0,
+      0,
+      0, // blank
+    ]);
+    const result = decodeCtc(logits, numClasses, dict);
     expect(result.text).toBe('AB');
     expect(result.confidence).toBeGreaterThan(0);
   });
 
   it('handles empty logits', () => {
-    const result = decodeCtc([], ['', 'A']);
+    const result = decodeCtc(new Float32Array(0), 2, ['', 'A']);
     expect(result.text).toBe('');
     expect(result.confidence).toBe(0);
   });
 
   it('decodes all-blank sequence', () => {
-    const logits = [
-      [1, 0],
-      [1, 0],
-    ];
-    const result = decodeCtc(logits, ['', 'A']);
+    const logits = new Float32Array([1, 0, 1, 0]);
+    const result = decodeCtc(logits, 2, ['', 'A']);
     expect(result.text).toBe('');
   });
 });

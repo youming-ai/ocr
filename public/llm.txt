@@ -1,0 +1,19 @@
+# Parsify — Your Files Never Leave Your Device
+
+## About
+Parsify is a privacy-first on-device OCR tool powered by PaddleOCR PP-OCRv6. Extract text from images and PDFs — source files stay in your browser. OCR processing runs locally via ONNX Runtime Web (WASM).
+
+## How It Works
+1. User uploads an image or PDF (drag & drop, paste, or file picker)
+2. PP-OCRv6 runs in the browser via ONNX Runtime Web (WASM) — no server upload
+3. Two-stage pipeline: text detection → text recognition
+
+## Features
+- On-device OCR — source files never leave your browser
+- Chinese, English, Japanese & Latin script support
+- PP-OCRv6: accurate text recognition, runs on any device via WASM
+- Image and PDF support
+
+## Privacy
+- OCR runs entirely in-browser — no file uploads to any server
+- No AI/LLM processing is used; extracted text is not sent anywhere

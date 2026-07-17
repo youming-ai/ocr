@@ -19,7 +19,7 @@ export interface OcrResult {
 }
 
 /** Pipeline processing stage */
-export type OcrStage = 'idle' | 'loading-models' | 'detecting' | 'classifying' | 'recognizing';
+export type OcrStage = 'idle' | 'loading-models' | 'detecting' | 'recognizing';
 
 /** Progress callback for OCR pipeline */
 export interface OcrProgress {
@@ -32,7 +32,7 @@ export interface OcrProgress {
 
 /** Configuration for OCR engine */
 export interface OcrEngineConfig {
-  /** Base URL for model files (default: '/models/pp-ocrv6-tiny') */
+  /** Base URL for model files (default: '/models/pp-ocrv6-small') */
   modelBaseUrl?: string;
   /** Maximum image dimension in pixels (default: 960) */
   maxDimension?: number;

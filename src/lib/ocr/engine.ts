@@ -21,7 +21,7 @@ export class OcrEngine {
 
   constructor(config?: OcrEngineConfig) {
     this.config = {
-      modelBaseUrl: config?.modelBaseUrl ?? '/models/pp-ocrv6-tiny',
+      modelBaseUrl: config?.modelBaseUrl ?? '/models/pp-ocrv6-small',
       maxDimension: config?.maxDimension ?? 960,
       detThreshold: config?.detThreshold ?? 0.3,
       detUnclipRatio: config?.detUnclipRatio ?? 1.6,

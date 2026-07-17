@@ -1,7 +1,7 @@
 {
   "name": "Parsify",
   "short_name": "Parsify",
-  "description": "On-device OCR powered by PaddleOCR PP-OCRv6. Extract text from images and PDFs — files stay in your browser. Optional AI cleanup sends only extracted text when you request it.",
+  "description": "On-device OCR powered by PaddleOCR PP-OCRv6. Extract text from images and PDFs — source files never leave your browser.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a0d14",
