@@ -70,6 +70,27 @@ export class OcrPipeline {
     );
     const { data: pixels } = imageToPixels(img, width, height);
 
+    const result = await this.processPixels(pixels, width, height);
+
+    // Scale box points back to original-image coordinates for the canvas overlay.
+    const scaledBoxes = result.boxes.map((b) => ({
+      ...b,
+      points: b.points.map((p) => [
+        Math.round((p[0] ?? 0) / scaleX),
+        Math.round((p[1] ?? 0) / scaleY),
+      ]),
+    }));
+
+    return {
+      boxes: scaledBoxes,
+      text: result.text,
+      elapsed: performance.now() - startTime,
+    };
+  }
+
+  async processPixels(pixels: Float32Array, width: number, height: number): Promise<OcrResult> {
+    const startTime = performance.now();
+
     // Stage 1: Detection
     this.report('detecting', 0.2, 'Detecting text regions...');
     const detInput = normalizeForDet(pixels);
@@ -95,31 +116,23 @@ export class OcrPipeline {
     }
 
     // Recognition runs on the resized pixel buffer, so cropping must use the
-    // detection (resized) coordinates. Boxes are scaled back to original-image
-    // coordinates only for the returned result (used for the canvas overlay).
+    // detection (resized) coordinates.
     const sortedBoxes = sortBoxes(detectedBoxes);
 
-    // Stage 2 & 3: Classification + Recognition for each box
-    this.report('classifying', 0.5, `Recognizing ${sortedBoxes.length} text regions...`);
+    // Stage 2: Recognition for each box
+    this.report('recognizing', 0.5, `Recognizing ${sortedBoxes.length} text regions...`);
     const textBoxes: TextBox[] = [];
 
     for (let i = 0; i < sortedBoxes.length; i++) {
       const box = sortedBoxes[i];
       if (!box) continue;
       const progress = 0.5 + (i / sortedBoxes.length) * 0.4;
-      this.report(
-        i < sortedBoxes.length / 2 ? 'classifying' : 'recognizing',
-        progress,
-        `Processing region ${i + 1}/${sortedBoxes.length}...`
-      );
+      this.report('recognizing', progress, `Processing region ${i + 1}/${sortedBoxes.length}...`);
 
       try {
         const { text, confidence } = await this.recognizeBox(pixels, width, height, box.points);
         if (text.trim().length > 0) {
-          const points = box.points.map((p) => [
-            Math.round((p[0] ?? 0) / scaleX),
-            Math.round((p[1] ?? 0) / scaleY),
-          ]);
+          const points = box.points.map((p) => [Math.round(p[0] ?? 0), Math.round(p[1] ?? 0)]);
           textBoxes.push({ points, text, confidence });
         }
       } catch (err) {
@@ -137,7 +150,7 @@ export class OcrPipeline {
     };
   }
 
-  private async recognizeBox(
+  async recognizeBox(
     pixels: Float32Array,
     imgWidth: number,
     imgHeight: number,
@@ -167,20 +180,53 @@ export class OcrPipeline {
 
     // Parse rec output: shape [1, seqLen, numClasses]
     const dims = recOutput.dims;
-    const seqLen = dims[1] as number;
     const numClasses = dims[2] as number;
     const data = recOutput.data as Float32Array;
 
-    // Extract logits per timestep
-    const logits: number[][] = [];
-    for (let t = 0; t < seqLen; t++) {
-      const timestep: number[] = [];
-      for (let c = 0; c < numClasses; c++) {
-        timestep.push(data[t * numClasses + c] ?? 0);
-      }
-      logits.push(timestep);
+    if (numClasses !== this.dict.length) {
+      throw new Error(
+        `Recognition model class count (${numClasses}) does not match dictionary length (${this.dict.length}). ` +
+          'The model and dictionary may be mismatched or outdated; clear the model cache and reload.'
+      );
     }
 
-    return decodeCtc(logits, this.dict);
+    return decodeCtc(data, numClasses, this.dict);
   }
 }
+
+/**
+ * TODO: Recognition batch inference.
+ *
+ * Current state: `processPixels` calls `recognizeBox` once per detected text
+ * region. Each call builds a `[1, 3, 48, W]` tensor and runs the recognition
+ * model separately. For documents with many boxes this is the dominant
+ * latency source after detection.
+ *
+ * Feasible approach:
+ * 1. Extend `normalizeForRec` (or add `normalizeForRecBatch`) to accept a
+ *    list of cropped CHW buffers and resize each to height 48 while keeping
+ *    per-box widths. Compute `maxW` across the batch.
+ * 2. Pad each normalized box to `[3, 48, maxW]` with the background mean
+ *    (0.5 after norm → 0.0) and stack into `[N, 3, 48, maxW]`.
+ * 3. Run the recognition model once with the batched tensor; output shape
+ *    becomes `[N, seqLen, numClasses]`.
+ * 4. Slice the per-box logits by each original width (or use a padding mask
+ *    if the model is sensitive to trailing pad) and run `decodeCtc` per box.
+ *
+ * Constraints / risks:
+ * - The CRNN recognizer expects a fixed horizontal sequence; padding on the
+ *   right usually has no effect because blank indices collapse, but this must
+ *   be validated against the PP-OCRv6-small model.
+ * - Memory grows with `N * maxW * 48 * 3 * 4` bytes. A safe first step is to
+ *   cap batch size (e.g., 8 or 16) and fall back to single-box inference when
+ *   the widest box exceeds a pixel budget.
+ * - Cancellation must be checked between batches so `AbortSignal` remains
+ *   responsive for large documents.
+ *
+ * Acceptance criteria before merging:
+ * - Add a benchmark comparing per-box vs batched latency on a 10-region,
+ *   50-region, and 200-region synthetic image.
+ * - Confirm no accuracy regression on a small held-out sample of real
+ *   screenshots/PDF pages.
+ * - Keep single-box path as fallback when batching fails or is disabled.
+ */

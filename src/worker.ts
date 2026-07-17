@@ -1,18 +1,8 @@
 import { app } from '~/server/hono';
 
-interface RateLimit {
-  limit(options: { key: string }): Promise<{ success: boolean }>;
-}
-
 interface Env {
-  LLM_API_KEY?: string;
-  LLM_API_BASE_URL?: string;
-  LLM_MODEL?: string;
-  DEEPSEEK_API_KEY?: string;
-  JINA_API_KEY?: string;
   PUBLIC_ORIGIN?: string;
   LOG_LEVEL?: string;
-  RATE_LIMITER?: RateLimit;
   ASSETS?: Fetcher;
 }
 

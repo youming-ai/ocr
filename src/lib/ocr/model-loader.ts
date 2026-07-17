@@ -1,16 +1,15 @@
 import * as ort from 'onnxruntime-web/wasm';
 import { logger } from '~/lib/logger';
 
-export type ModelName = 'det' | 'cls' | 'rec';
+export type ModelName = 'det' | 'rec';
 
 const MODEL_FILES: Record<ModelName, string> = {
   det: 'det.onnx',
-  cls: 'cls.onnx',
   rec: 'rec.onnx',
 };
 
 const DB_NAME = 'parsify-ocr-models';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const STORE_NAME = 'models';
 
 function openDB(): Promise<IDBDatabase> {
@@ -108,7 +107,6 @@ async function fetchModel(
 
 export interface LoadedModels {
   det: ort.InferenceSession;
-  cls: ort.InferenceSession | null;
   rec: ort.InferenceSession;
 }
 
@@ -117,7 +115,7 @@ export interface LoadedModels {
  * Checks IndexedDB cache first, falls back to network fetch.
  */
 export async function loadModels(
-  baseUrl = '/models/pp-ocrv6-tiny',
+  baseUrl = '/models/pp-ocrv6-small',
   onModelLoaded?: (name: ModelName, fromCache: boolean) => void
 ): Promise<LoadedModels> {
   ort.env.wasm.numThreads = 1;
@@ -168,13 +166,5 @@ export async function loadModels(
 
   const [det, rec] = await Promise.all([loadOne('det'), loadOne('rec')]);
 
-  // cls model is optional — PP-OCRv6 tiny may not include it
-  let cls: ort.InferenceSession | null = null;
-  try {
-    cls = await loadOne('cls');
-  } catch {
-    logger.info('cls model not available, skipping classification step');
-  }
-
-  return { det, cls, rec };
+  return { det, rec };
 }

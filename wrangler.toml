@@ -2,13 +2,6 @@ name = "ocr"
 main = "src/worker.ts"
 compatibility_date = "2026-05-19"
 
-# Native edge rate limiting — atomic, no Durable Object migration (so it stays
-# compatible with `wrangler versions upload`). period must be 10 or 60 seconds.
-[[ratelimits]]
-name = "RATE_LIMITER"
-namespace_id = "1001"
-simple = { limit = 20, period = 60 }
-
 [assets]
 binding = "ASSETS"
 directory = "dist/client"

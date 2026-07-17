@@ -1,4 +1,6 @@
 @import 'tailwindcss';
+@import './fonts/geist-latin.css';
+@import './fonts/geist-mono-latin.css';
 
 /*
  * Parsify — Vercel Geist Design System (Light Theme).
@@ -146,8 +148,8 @@
   --radius-full: 9999px;
 
   /* ── Layer 3: Typography ───────────────────────────────── */
-  --font-sans: 'Geist', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --font-sans: 'Geist Variable', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'Geist Mono Variable', ui-monospace, 'SF Mono', Menlo, monospace;
 
   /* ── Layer 3: Elevation ────────────────────────────────── */
   --shadow-raised: 0 2px 2px rgba(0, 0, 0, 0.04);

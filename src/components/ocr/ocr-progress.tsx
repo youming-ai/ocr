@@ -12,7 +12,6 @@ interface OcrProgressProps {
 const PIPELINE: { stage: OcrProgress['stage']; key: TranslationKey }[] = [
   { stage: 'loading-models', key: 'step.load' },
   { stage: 'detecting', key: 'step.detect' },
-  { stage: 'classifying', key: 'step.classify' },
   { stage: 'recognizing', key: 'step.recognize' },
 ];
 
@@ -20,7 +19,6 @@ const STAGE_KEY: Record<OcrProgress['stage'], TranslationKey | null> = {
   idle: null,
   'loading-models': 'progress.loading-models',
   detecting: 'progress.detecting',
-  classifying: 'progress.classifying',
   recognizing: 'progress.recognizing',
 };
 

@@ -5,6 +5,7 @@ import { cn } from '~/lib/utils';
 const OPTIONS: { value: Lang; label: string; name: string }[] = [
   { value: 'en', label: 'EN', name: 'English' },
   { value: 'zh', label: '中', name: '中文' },
+  { value: 'ja', label: '日', name: '日本語' },
 ];
 
 export function LanguageToggle() {

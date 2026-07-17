@@ -15,15 +15,20 @@ const STORAGE_KEY = 'parsify-lang';
 function detectLang(): Lang {
   if (typeof window === 'undefined') return 'en';
   const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored === 'en' || stored === 'zh') return stored;
-  return navigator.language?.toLowerCase().startsWith('zh') ? 'zh' : 'en';
+  if (stored === 'en' || stored === 'zh' || stored === 'ja') return stored;
+  const nav = navigator.language?.toLowerCase() ?? '';
+  if (nav.startsWith('zh')) return 'zh';
+  if (nav.startsWith('ja')) return 'ja';
+  return 'en';
 }
+
+const HTML_LANG: Record<Lang, string> = { en: 'en', zh: 'zh-CN', ja: 'ja' };
 
 export function I18nProvider({ children }: { children: React.ReactNode }) {
   const [lang, setLangState] = useState<Lang>(detectLang);
 
   useEffect(() => {
-    document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+    document.documentElement.lang = HTML_LANG[lang];
   }, [lang]);
 
   const setLang = useCallback((next: Lang) => {

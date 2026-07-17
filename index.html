@@ -4,21 +4,15 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
     <title>Parsify — Your Files Never Leave Your Device</title>
-    <meta name="description" content="On-device OCR powered by PaddleOCR PP-OCRv6. Extract text from images and PDFs — files stay in your browser. Optional AI cleanup sends only extracted text when you request it." />
+    <meta name="description" content="On-device OCR powered by PaddleOCR PP-OCRv6. Extract text from images and PDFs — source files never leave your browser." />
     <link rel="canonical" href="https://parsify.dev/" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#0a0d14" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&display=swap"
-      rel="stylesheet"
-    />
     <meta property="og:type" content="website" />
     <meta property="og:title" content="Parsify — Your Files Never Leave Your Device" />
-    <meta property="og:description" content="On-device OCR powered by PaddleOCR PP-OCRv6. Extract text from images and PDFs — files stay in your browser. Optional AI cleanup sends only extracted text when you request it." />
+    <meta property="og:description" content="On-device OCR powered by PaddleOCR PP-OCRv6. Extract text from images and PDFs — source files never leave your browser." />
     <meta property="og:url" content="https://parsify.dev/" />
     <meta property="og:site_name" content="Parsify" />
     <meta property="og:locale" content="en_US" />
@@ -28,24 +22,17 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@parsifydev" />
     <meta name="twitter:title" content="Parsify — Your Files Never Leave Your Device" />
-    <meta name="twitter:description" content="On-device OCR powered by PaddleOCR PP-OCRv6. Extract text from images and PDFs — files stay in your browser. Optional AI cleanup sends only extracted text when you request it." />
+    <meta name="twitter:description" content="On-device OCR powered by PaddleOCR PP-OCRv6. Extract text from images and PDFs — source files never leave your browser." />
     <meta name="twitter:image" content="https://parsify.dev/opengraph-image.png" />
-    <script>
-      (function(c,l,a,r,i,t,y){
-        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
-        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
-        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
-      })(window, document, "clarity", "script", "wmm88v8vgn");
-    </script>
     <script>
       var stored = localStorage.getItem('parsify-theme');
       var theme = stored !== null ? stored : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
       if (theme === 'dark') document.documentElement.classList.add('dark');
 
       var storedLang = localStorage.getItem('parsify-lang');
-      var lang = (storedLang === 'en' || storedLang === 'zh') ? storedLang
+      var lang = (storedLang === 'en' || storedLang === 'zh' || storedLang === 'ja') ? storedLang
         : ((navigator.language || '').toLowerCase().indexOf('zh') === 0 ? 'zh' : 'en');
-      document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+      document.documentElement.lang = lang === 'zh' ? 'zh-CN' : lang;
     </script>
     <script type="application/ld+json">
     {
@@ -53,7 +40,7 @@
       "@type": "WebApplication",
       "name": "Parsify",
       "url": "https://parsify.dev",
-      "description": "On-device OCR powered by PaddleOCR PP-OCRv6. Extract text from images and PDFs — files stay in your browser. Optional AI cleanup sends only extracted text when you request it.",
+      "description": "On-device OCR powered by PaddleOCR PP-OCRv6. Extract text from images and PDFs — source files never leave your browser.",
       "applicationCategory": "DeveloperApplication",
       "operatingSystem": "Web",
       "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
