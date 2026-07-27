@@ -1,16 +1,8 @@
 import * as ort from 'onnxruntime-web';
 import { logger } from '~/lib/logger';
-import { CHARACTER_DICT, loadFullDictionary } from './character-dict';
 import type { LoadedModels } from './model-loader';
 import { decodeCtc, extractBoxes, sortBoxes } from './postprocessor';
-import {
-  cropRegion,
-  imageToPixels,
-  loadImage,
-  normalizeForDet,
-  normalizeForRec,
-  resizeImage,
-} from './preprocessor';
+import { cropRegion, imageToPixels, loadImage, normalizeForRec, resizeImage } from './preprocessor';
 import type { OcrProgress, OcrResult, TextBox } from './types';
 
 export interface PipelineConfig {
@@ -33,7 +25,7 @@ export class OcrPipeline {
   private models: LoadedModels;
   private onProgress?: (progress: OcrProgress) => void;
   private config: PipelineConfig;
-  private dict: string[] = CHARACTER_DICT;
+  private dict: string[] = [];
 
   constructor(
     models: LoadedModels,
@@ -47,10 +39,6 @@ export class OcrPipeline {
 
   private report(stage: OcrProgress['stage'], progress: number, message: string) {
     this.onProgress?.({ stage, progress, message });
-  }
-
-  async init(): Promise<void> {
-    this.dict = await loadFullDictionary();
   }
 
   setDict(dict: string[]) {
@@ -93,8 +81,7 @@ export class OcrPipeline {
 
     // Stage 1: Detection
     this.report('detecting', 0.2, 'Detecting text regions...');
-    const detInput = normalizeForDet(pixels);
-    const detTensor = new ort.Tensor('float32', detInput, [1, 3, height, width]);
+    const detTensor = new ort.Tensor('float32', pixels, [1, 3, height, width]);
     const detResults = await this.models.det.run({ x: detTensor });
     const detKey = Object.keys(detResults)[0];
     if (!detKey) throw new Error('Detection model returned no output');
@@ -194,39 +181,5 @@ export class OcrPipeline {
   }
 }
 
-/**
- * TODO: Recognition batch inference.
- *
- * Current state: `processPixels` calls `recognizeBox` once per detected text
- * region. Each call builds a `[1, 3, 48, W]` tensor and runs the recognition
- * model separately. For documents with many boxes this is the dominant
- * latency source after detection.
- *
- * Feasible approach:
- * 1. Extend `normalizeForRec` (or add `normalizeForRecBatch`) to accept a
- *    list of cropped CHW buffers and resize each to height 48 while keeping
- *    per-box widths. Compute `maxW` across the batch.
- * 2. Pad each normalized box to `[3, 48, maxW]` with the background mean
- *    (0.5 after norm → 0.0) and stack into `[N, 3, 48, maxW]`.
- * 3. Run the recognition model once with the batched tensor; output shape
- *    becomes `[N, seqLen, numClasses]`.
- * 4. Slice the per-box logits by each original width (or use a padding mask
- *    if the model is sensitive to trailing pad) and run `decodeCtc` per box.
- *
- * Constraints / risks:
- * - The CRNN recognizer expects a fixed horizontal sequence; padding on the
- *   right usually has no effect because blank indices collapse, but this must
- *   be validated against the PP-OCRv6-small model.
- * - Memory grows with `N * maxW * 48 * 3 * 4` bytes. A safe first step is to
- *   cap batch size (e.g., 8 or 16) and fall back to single-box inference when
- *   the widest box exceeds a pixel budget.
- * - Cancellation must be checked between batches so `AbortSignal` remains
- *   responsive for large documents.
- *
- * Acceptance criteria before merging:
- * - Add a benchmark comparing per-box vs batched latency on a 10-region,
- *   50-region, and 200-region synthetic image.
- * - Confirm no accuracy regression on a small held-out sample of real
- *   screenshots/PDF pages.
- * - Keep single-box path as fallback when batching fails or is disabled.
- */
+// ponytail: recognition runs per-box. Batch inference is tracked in
+// https://github.com/youming-ai/parsify.dev/issues (if filed).
