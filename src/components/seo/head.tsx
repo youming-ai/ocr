@@ -43,22 +43,22 @@ export function useDocumentHead({
   useEffect(() => {
     document.title = fullTitle;
 
-    setMeta('description', description);
+    setMetaTag('name', 'description', description);
     setLink('canonical', url);
-    setMetaProperty('og:title', fullTitle);
-    setMetaProperty('og:description', description);
-    setMetaProperty('og:type', ogType);
-    setMetaProperty('og:url', url);
-    setMetaProperty('og:site_name', SITE_CONFIG.SITE_NAME);
-    setMetaProperty('og:locale', SITE_CONFIG.DEFAULT_LOCALE);
-    setMetaProperty('og:image', ogImage);
-    setMetaProperty('og:image:width', String(SITE_CONFIG.DEFAULT_OG_IMAGE_WIDTH));
-    setMetaProperty('og:image:height', String(SITE_CONFIG.DEFAULT_OG_IMAGE_HEIGHT));
-    setMetaName('twitter:card', 'summary_large_image');
-    setMetaName('twitter:site', SITE_CONFIG.TWITTER_HANDLE);
-    setMetaName('twitter:title', fullTitle);
-    setMetaName('twitter:description', description);
-    setMetaName('twitter:image', ogImage);
+    setMetaTag('property', 'og:title', fullTitle);
+    setMetaTag('property', 'og:description', description);
+    setMetaTag('property', 'og:type', ogType);
+    setMetaTag('property', 'og:url', url);
+    setMetaTag('property', 'og:site_name', SITE_CONFIG.SITE_NAME);
+    setMetaTag('property', 'og:locale', SITE_CONFIG.DEFAULT_LOCALE);
+    setMetaTag('property', 'og:image', ogImage);
+    setMetaTag('property', 'og:image:width', String(SITE_CONFIG.DEFAULT_OG_IMAGE_WIDTH));
+    setMetaTag('property', 'og:image:height', String(SITE_CONFIG.DEFAULT_OG_IMAGE_HEIGHT));
+    setMetaTag('name', 'twitter:card', 'summary_large_image');
+    setMetaTag('name', 'twitter:site', SITE_CONFIG.TWITTER_HANDLE);
+    setMetaTag('name', 'twitter:title', fullTitle);
+    setMetaTag('name', 'twitter:description', description);
+    setMetaTag('name', 'twitter:image', ogImage);
 
     const jsonLdScripts: object[] = [];
 
@@ -92,31 +92,12 @@ export function useDocumentHead({
   }, [fullTitle, description, url, ogType, ogImage, breadcrumbs, extraJsonLd]);
 }
 
-function setMeta(name: string, content: string) {
-  let el = document.querySelector(`meta[name="${name}"]`);
+function setMetaTag(attr: string, value: string, content: string) {
+  const selector = attr === 'property' ? `meta[property="${value}"]` : `meta[name="${value}"]`;
+  let el = document.querySelector(selector);
   if (!el) {
     el = document.createElement('meta');
-    el.setAttribute('name', name);
-    document.head.appendChild(el);
-  }
-  el.setAttribute('content', content);
-}
-
-function setMetaProperty(property: string, content: string) {
-  let el = document.querySelector(`meta[property="${property}"]`);
-  if (!el) {
-    el = document.createElement('meta');
-    el.setAttribute('property', property);
-    document.head.appendChild(el);
-  }
-  el.setAttribute('content', content);
-}
-
-function setMetaName(name: string, content: string) {
-  let el = document.querySelector(`meta[name="${name}"]`);
-  if (!el) {
-    el = document.createElement('meta');
-    el.setAttribute('name', name);
+    el.setAttribute(attr, value);
     document.head.appendChild(el);
   }
   el.setAttribute('content', content);

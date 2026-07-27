@@ -1,3 +1,4 @@
+import { loadFullDictionary } from './character-dict';
 import { type LoadedModels, loadModels } from './model-loader';
 import { OcrPipeline } from './pipeline';
 import type { OcrEngineConfig, OcrProgress, OcrResult } from './types';
@@ -45,8 +46,6 @@ export class OcrEngine {
 
     this.loading = loadModels(this.config.modelBaseUrl, onModelLoaded).then(async (models) => {
       this.models = models;
-      // Pre-load the character dictionary once so every recognize() call skips the fetch.
-      const { loadFullDictionary } = await import('./character-dict');
       this.dict = await loadFullDictionary(this.config.modelBaseUrl);
     });
 
