@@ -11,7 +11,7 @@ Add PDF support to Parsify OCR. PDF pages are rendered to images in the browser 
 ## Requirements
 
 - **Accepted formats**: PDF, PNG, JPEG, WebP, BMP, TIFF
-- **PDF limits**: ≤200MB file size, ≤1000 pages
+- **PDF limits**: ≤200MB file size, ≤50 pages by default (callers may raise the cap)
 - **Image limits**: ≤10MB per image file
 - **Processing**: PDF pages rendered sequentially, each page runs through OCR pipeline
 - **UI**: Page navigation for multi-page PDFs, per-page results + aggregated full-text
@@ -61,10 +61,10 @@ export async function renderPdfPages(
 ): Promise<{ pages: string[]; totalPages: number }>
 ```
 
-- Uses `pdfjs-dist` with `GlobalWorkerOptions.workerSrc` pointing to CDN worker
+- Uses `pdfjs-dist` with `GlobalWorkerOptions.workerSrc` set to the self-hosted `/pdf.worker.min.mjs`
 - Renders each page to canvas at 2x scale (capped at 960px width)
 - Returns Object URLs for each rendered page
-- Limits to `maxPages` (default 1000)
+- Limits to `maxPages` (default 50) to bound browser memory; callers may raise the cap
 - Caller is responsible for revoking Object URLs
 
 ### `image-upload.tsx` changes

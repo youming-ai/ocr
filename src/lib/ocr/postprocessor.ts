@@ -1,6 +1,5 @@
 export interface DetectedBox {
   points: number[][];
-  score: number;
 }
 
 export interface CtcResult {
@@ -234,7 +233,6 @@ export function extractBoxes(
 
   return kept.map((i) => ({
     points: components[i]?.box ?? [],
-    score: components[i]?.score ?? 0,
   }));
 }
 

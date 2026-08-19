@@ -1,80 +1,20 @@
 import type React from 'react';
-import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { createContext, useContext } from 'react';
 
-type Theme = 'light' | 'dark' | 'system';
+type Theme = 'light';
 
 interface ThemeContextValue {
   theme: Theme;
-  resolvedTheme: 'light' | 'dark';
+  resolvedTheme: Theme;
   setTheme: (theme: Theme) => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
-const STORAGE_KEY = 'parsify-theme';
-
-function getSystemTheme(): 'light' | 'dark' {
-  if (typeof window === 'undefined') return 'light';
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-}
-
-function getStoredTheme(): Theme {
-  if (typeof window === 'undefined') return 'system';
-  return (localStorage.getItem(STORAGE_KEY) as Theme) || 'system';
-}
-
-function applyTheme(resolved: 'light' | 'dark') {
-  const root = document.documentElement;
-  if (resolved === 'dark') {
-    root.classList.add('dark');
-  } else {
-    root.classList.remove('dark');
-  }
-}
-
-function resolveTheme(theme: Theme): 'light' | 'dark' {
-  if (theme === 'system') return getSystemTheme();
-  return theme;
-}
-
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeVal] = useState<Theme>(getStoredTheme);
-  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>(() =>
-    resolveTheme(getStoredTheme())
-  );
-
-  const setTheme = useCallback((newTheme: Theme) => {
-    const resolved = resolveTheme(newTheme);
-    setThemeVal(newTheme);
-    setResolvedTheme(resolved);
-    applyTheme(resolved);
-    localStorage.setItem(STORAGE_KEY, newTheme);
-  }, []);
-
-  useEffect(() => {
-    const saved = getStoredTheme();
-    const resolved = resolveTheme(saved);
-    setThemeVal(saved);
-    setResolvedTheme(resolved);
-    applyTheme(resolved);
-  }, []);
-
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    const handler = () => {
-      const current = getStoredTheme();
-      if (current === 'system') {
-        const resolved = getSystemTheme();
-        setResolvedTheme(resolved);
-        applyTheme(resolved);
-      }
-    };
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
-  }, []);
-
+  const setTheme = () => {};
   return (
-    <ThemeContext.Provider value={{ theme, resolvedTheme, setTheme }}>
+    <ThemeContext.Provider value={{ theme: 'light', resolvedTheme: 'light', setTheme }}>
       {children}
     </ThemeContext.Provider>
   );

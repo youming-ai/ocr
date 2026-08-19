@@ -1,10 +1,10 @@
-# Parsify
+# OCR
 
 ### Your Files Never Leave Your Device
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-🌐 **Live**: [parsify.dev](https://parsify.dev)
+🌐 **Live**: [ocr.um1ng.me](https://ocr.um1ng.me)
 
 On-device OCR powered by PaddleOCR PP-OCRv6. Extract text from images and PDFs — files stay in your browser.
 
@@ -17,8 +17,8 @@ On-device OCR powered by PaddleOCR PP-OCRv6. Extract text from images and PDFs �
 ### Install & run
 
 ```bash
-git clone https://github.com/youming-ai/parsify.dev.git
-cd parsify.dev
+git clone https://github.com/youming-ai/ocr.git
+cd ocr
 bun install
 bun run dev
 ```

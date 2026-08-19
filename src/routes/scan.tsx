@@ -4,12 +4,18 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useI18n } from '~/components/i18n-provider';
 import { OcrCanvas } from '~/components/ocr/ocr-canvas';
 import { OcrProgressIndicator } from '~/components/ocr/ocr-progress';
-import { OcrResult } from '~/components/ocr/ocr-result';
+import { OcrResultList } from '~/components/ocr/ocr-result';
 import { Button } from '~/components/ui/button';
 import { CopyButton } from '~/components/ui/copy-button';
 import type { OcrEngine } from '~/lib/ocr/engine';
 import { takePendingFile } from '~/lib/ocr/scan-input';
-import { runScanSession, type ScanSession, type ScanSessionState } from '~/lib/ocr/scan-session';
+import {
+  runScanSession,
+  type ScanSession,
+  type ScanSessionState,
+  serializeAllPagesDoc,
+  serializeAllPagesJson,
+} from '~/lib/ocr/scan-session';
 import type { OcrProgress } from '~/lib/ocr/types';
 import { cn } from '~/lib/utils';
 
@@ -43,6 +49,7 @@ function ScanPage() {
 
   const sessionRef = useRef<ScanSession | null>(null);
   const startedRef = useRef(false);
+  const startCancelledRef = useRef(false);
   const navigateHome = useCallback(() => navigate({ to: '/', replace: true }), [navigate]);
 
   const onUpdate = useCallback((next: ScanSessionState) => {
@@ -53,12 +60,15 @@ function ScanPage() {
     if (startedRef.current) {
       // StrictMode: every real mount must register a cleanup. The second
       // invocation is a no-op, but its cleanup will run on actual unmount.
+      startCancelledRef.current = false;
       return () => {
+        startCancelledRef.current = true;
         sessionRef.current?.cancel();
         sessionRef.current = null;
       };
     }
     startedRef.current = true;
+    startCancelledRef.current = false;
 
     const file = takePendingFile();
     if (!file) {
@@ -68,6 +78,7 @@ function ScanPage() {
 
     const start = async () => {
       const engine = await getEngine();
+      if (startCancelledRef.current) return;
       const session = await runScanSession({
         file,
         engine,
@@ -75,12 +86,17 @@ function ScanPage() {
         navigateHome,
         t,
       });
+      if (startCancelledRef.current) {
+        session.cancel();
+        return;
+      }
       sessionRef.current = session;
     };
 
     void start();
 
     return () => {
+      startCancelledRef.current = true;
       sessionRef.current?.cancel();
       sessionRef.current = null;
     };
@@ -100,31 +116,8 @@ function ScanPage() {
       : null;
 
   const docText = activeResult?.text ?? '';
-  const singleJsonText = activeResult
-    ? JSON.stringify(
-        { boxes: activeResult.boxes, text: activeResult.text, elapsed: activeResult.elapsed },
-        null,
-        2
-      )
-    : '';
-  const fullPdfDocText = state.pages
-    .map((p) => `--- Page ${p.pageNumber} ---\n${p.ocr.text}`)
-    .join('\n\n');
-  const fullPdfJsonText =
-    state.pages.length > 0
-      ? JSON.stringify(
-          {
-            pages: state.pages.map((p) => ({
-              pageNumber: p.pageNumber,
-              boxes: p.ocr.boxes,
-              text: p.ocr.text,
-              elapsed: p.ocr.elapsed,
-            })),
-          },
-          null,
-          2
-        )
-      : singleJsonText;
+  const fullPdfDocText = serializeAllPagesDoc(state);
+  const fullPdfJsonText = serializeAllPagesJson(state);
   const activeText =
     outputTab === 'json' ? fullPdfJsonText : outputTab === 'pages' ? fullPdfDocText : docText;
 
@@ -136,11 +129,11 @@ function ScanPage() {
     const a = document.createElement('a');
     a.href = url;
     if (isJson) {
-      a.download = 'parsify-result.json';
+      a.download = 'ocr-result.json';
     } else if (isAllPages) {
-      a.download = 'parsify-result-all-pages.txt';
+      a.download = 'ocr-result-all-pages.txt';
     } else {
-      a.download = 'parsify-result.txt';
+      a.download = 'ocr-result.txt';
     }
     a.click();
     URL.revokeObjectURL(url);
@@ -267,7 +260,7 @@ function ScanPage() {
                   <p className="mb-2 font-mono text-[11px] tracking-wider text-muted-foreground">
                     {t('output.lines', { n: activeResult.boxes.length })}
                   </p>
-                  <OcrResult
+                  <OcrResultList
                     boxes={activeResult.boxes}
                     highlightedIndex={highlightedBox}
                     onBoxHover={setHighlightedBox}

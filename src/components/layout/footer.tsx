@@ -5,7 +5,7 @@ import { Link } from '~/components/link';
 const socialLinks = [
   {
     name: 'GitHub',
-    href: 'https://github.com/youming-ai/parsify.dev',
+    href: 'https://github.com/youming-ai/ocr',
     icon: () => (
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -52,9 +52,7 @@ export function Footer() {
           <p className="font-mono text-[11px] tracking-wider text-muted-foreground">
             <span className="text-green-700">●</span> {t('footer.status')}
           </p>
-          <p className="text-xs text-muted-foreground">
-            &copy; {new Date().getFullYear()} Parsify.dev
-          </p>
+          <p className="text-xs text-muted-foreground">&copy; {new Date().getFullYear()} OCR</p>
         </div>
 
         <div className="flex items-center gap-4">

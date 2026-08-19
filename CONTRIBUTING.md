@@ -1,33 +1,29 @@
-# Contributing to Parsify.dev
+# Contributing to OCR
 
-Thank you for your interest in contributing to Parsify! This document provides guidelines and instructions for contributing.
+Thank you for your interest in contributing to OCR! This document provides guidelines and instructions for contributing.
 
 ## Development Setup
 
-### Prerequisites
-
 - [Bun](https://bun.sh/) ≥ 1.3
-- A [DeepSeek API key](https://platform.deepseek.com/api_keys) (required)
-- A [Jina Reader API key](https://jina.ai/api-dashboard) (optional, raises rate limit)
+- A modern browser with WebAssembly support
 
 ### Getting Started
 
 1. Fork the repository
 2. Clone your fork:
    ```bash
-   git clone https://github.com/<your-username>/parsify.dev.git
-   cd parsify.dev
+   git clone https://github.com/<your-username>/ocr.git
+   cd ocr
    ```
 3. Install dependencies:
    ```bash
    bun install
    ```
-4. Copy the environment file:
+4. Copy the environment file if you want local overrides:
    ```bash
    cp .env.example .env
    ```
-5. Fill in your API keys in `.env`
-6. Start the development server:
+5. Start the development server:
    ```bash
    bun run dev
    ```

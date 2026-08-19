@@ -36,7 +36,6 @@ const en = {
   'step.detect': 'DETECT',
   'step.recognize': 'RECOGNIZE',
 
-  'source.title': 'SOURCE',
   'source.boxes': '{n} boxes',
   'source.showBoxes': 'Show detection boxes',
   'source.hideBoxes': 'Hide detection boxes',
@@ -97,7 +96,6 @@ const zh: Record<TranslationKey, string> = {
   'step.detect': '检测',
   'step.recognize': '识别',
 
-  'source.title': '源文件',
   'source.boxes': '{n} 个文本框',
   'source.showBoxes': '显示检测框',
   'source.hideBoxes': '隐藏检测框',
@@ -160,7 +158,6 @@ const ja: Record<TranslationKey, string> = {
   'step.detect': '検出',
   'step.recognize': '認識',
 
-  'source.title': 'ソース',
   'source.boxes': '{n} 個の枠',
   'source.showBoxes': '検出枠を表示',
   'source.hideBoxes': '検出枠を非表示',

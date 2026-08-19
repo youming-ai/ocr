@@ -6,8 +6,6 @@
 export interface ResizeResult {
   width: number;
   height: number;
-  /** Legacy single scale (maxDimension / maxSide). */
-  scale: number;
   /** Actual horizontal scale after snapping. */
   scaleX: number;
   /** Actual vertical scale after snapping. */
@@ -34,7 +32,6 @@ export function resizeImage(srcWidth: number, srcHeight: number, maxDimension = 
     height,
     scaleX: width / srcWidth,
     scaleY: height / srcHeight,
-    scale,
   };
 }
 
@@ -81,32 +78,6 @@ export function imageToPixels(
   }
 
   return { data, width: targetWidth, height: targetHeight };
-}
-
-/**
- * Apply normalization to detection model input in CHW format.
- * Expects pixel values already in [0, 1] (as produced by `imageToPixels`), then
- * applies optional per-channel mean/std. Default mean/std is identity, so the
- * input passes through unchanged. NOTE: do not divide by 255 here — the input
- * is already normalized; doing so again yields a near-black image and breaks
- * detection.
- */
-export function normalizeForDet(
-  data: Float32Array,
-  mean = [0, 0, 0],
-  std = [1, 1, 1]
-): Float32Array {
-  const pixels = data.length / 3;
-  const result = new Float32Array(data.length);
-
-  for (let c = 0; c < 3; c++) {
-    for (let i = 0; i < pixels; i++) {
-      const value = data[c * pixels + i] ?? 0; // already in [0, 1]
-      result[c * pixels + i] = (value - (mean[c] ?? 0)) / (std[c] ?? 1);
-    }
-  }
-
-  return result;
 }
 
 /**

@@ -27,11 +27,11 @@ import * as pdfjsLib from 'pdfjs-dist';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 import { logger } from '~/lib/logger';
 
-// Configure worker — use CDN for pdfjs worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+// Configure the self-hosted pdf.js worker copied into /public by postinstall
+pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 
 export interface RenderPdfOptions {
-  /** Maximum number of pages to render (default: 1000) */
+  /** Maximum number of pages to render (default: 50) */
   maxPages?: number;
   /** Render scale — 2 = 2x resolution (default: 2) */
   scale?: number;
@@ -54,7 +54,7 @@ export async function renderPdfPages(
   file: File,
   opts?: RenderPdfOptions,
 ): Promise<PdfRenderResult> {
-  const maxPages = opts?.maxPages ?? 1000;
+  const maxPages = opts?.maxPages ?? 50;
   const scale = opts?.scale ?? 2;
   const maxWidth = opts?.maxWidth ?? 960;
 

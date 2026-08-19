@@ -27,7 +27,7 @@ User-agent: CCBot
 Disallow: /
 
 # Sitemaps
-Sitemap: https://parsify.dev/sitemap.xml
+Sitemap: https://ocr.um1ng.me/sitemap.xml
 
 # Crawl-delay
 User-agent: *

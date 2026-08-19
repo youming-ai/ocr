@@ -32,6 +32,25 @@ export interface ScanSession {
   onCancelled(callback: () => void): () => void;
 }
 
+export function serializeAllPagesDoc(state: ScanSessionState): string {
+  return state.pages.map((p) => `--- Page ${p.pageNumber} ---\n${p.ocr.text}`).join('\n\n');
+}
+
+export function serializeAllPagesJson(state: ScanSessionState): string {
+  return JSON.stringify(
+    {
+      pages: state.pages.map((p) => ({
+        pageNumber: p.pageNumber,
+        boxes: p.ocr.boxes,
+        text: p.ocr.text,
+        elapsed: p.ocr.elapsed,
+      })),
+    },
+    null,
+    2
+  );
+}
+
 interface ScanDeps {
   file: File;
   engine: OcrEngine;
@@ -77,12 +96,14 @@ export async function runScanSession(deps: ScanDeps): Promise<ScanSession> {
     objectUrls = [];
   }
 
-  function setStatus(next: ScanStatus) {
+  function setStatus(next: ScanStatus, force = false) {
+    if (cancelled && !force) return;
     state.status = next;
     onUpdate({ ...state });
   }
 
   function reportProgress(stage: OcrProgress['stage'], progress: number, message: string) {
+    if (cancelled) return;
     const p: OcrProgress = { stage, progress, message };
     setStatus(
       stage === 'loading-models'
@@ -100,19 +121,15 @@ export async function runScanSession(deps: ScanDeps): Promise<ScanSession> {
   }
 
   function exportCurrentDoc(): string {
-    if (state.pages.length > 0) {
-      const current = state.pages[state.activePage - 1];
-      return current?.ocr.text ?? '';
-    }
-    return state.pages[0]?.ocr.text ?? '';
+    return state.pages[state.activePage - 1]?.ocr.text ?? '';
   }
 
   function exportAllPagesDoc(): string {
-    return state.pages.map((p) => `--- Page ${p.pageNumber} ---\n${p.ocr.text}`).join('\n\n');
+    return serializeAllPagesDoc(state);
   }
 
   function exportCurrentJson(): string {
-    const current = state.pages.length > 0 ? state.pages[state.activePage - 1] : state.pages[0];
+    const current = state.pages[state.activePage - 1];
     if (!current) return '';
     return JSON.stringify(
       { boxes: current.ocr.boxes, text: current.ocr.text, elapsed: current.ocr.elapsed },
@@ -122,18 +139,7 @@ export async function runScanSession(deps: ScanDeps): Promise<ScanSession> {
   }
 
   function exportAllPagesJson(): string {
-    return JSON.stringify(
-      {
-        pages: state.pages.map((p) => ({
-          pageNumber: p.pageNumber,
-          boxes: p.ocr.boxes,
-          text: p.ocr.text,
-          elapsed: p.ocr.elapsed,
-        })),
-      },
-      null,
-      2
-    );
+    return serializeAllPagesJson(state);
   }
 
   const session: ScanSession = {
@@ -141,10 +147,10 @@ export async function runScanSession(deps: ScanDeps): Promise<ScanSession> {
       return { ...state };
     },
     cancel() {
+      fireCancelled();
       controller.abort();
       revokeAll();
-      setStatus({ stage: 'idle' });
-      fireCancelled();
+      setStatus({ stage: 'idle' }, true);
     },
     setActivePage,
     exportCurrentDoc,
@@ -173,10 +179,18 @@ export async function runScanSession(deps: ScanDeps): Promise<ScanSession> {
   }
 
   function handleError(err: unknown) {
+    if (cancelled) return;
     const message = err instanceof Error ? err.message : t('error.ocrFailed');
     logger.error(`Scan failed: ${message}`);
     setStatus({ stage: 'error', message });
     revokeAll();
+  }
+
+  function throwIfCancelled() {
+    if (!cancelled) return;
+    const error = new Error('Scan cancelled');
+    error.name = 'AbortError';
+    throw error;
   }
 
   function addObjectUrl(src: string) {
@@ -187,11 +201,13 @@ export async function runScanSession(deps: ScanDeps): Promise<ScanSession> {
     try {
       if (file.type === 'application/pdf') {
         await ensureModels();
+        throwIfCancelled();
         // PDF.js is large; only load it when the user actually uploads a PDF.
         const { renderPdfPages } = await import('./pdf-renderer');
         await renderPdfPages(file, {
           signal: controller.signal,
           onPage: async ({ pageNumber, imageSrc, totalPages, pagesToRender }) => {
+            throwIfCancelled();
             addObjectUrl(imageSrc);
             state.imageSrc = imageSrc;
             state.activePage = pageNumber;
@@ -206,12 +222,14 @@ export async function runScanSession(deps: ScanDeps): Promise<ScanSession> {
             const ocr = await engine.recognize(imageSrc, (p) =>
               reportProgress(p.stage, p.progress, p.message)
             );
+            throwIfCancelled();
             state.pages.push({ pageNumber, ocr, imageSrc });
             onUpdate({ ...state });
           },
         });
       } else {
         await ensureModels();
+        throwIfCancelled();
         const src = URL.createObjectURL(file);
         addObjectUrl(src);
         state.imageSrc = src;
@@ -219,13 +237,15 @@ export async function runScanSession(deps: ScanDeps): Promise<ScanSession> {
         const result = await engine.recognize(src, (p) =>
           reportProgress(p.stage, p.progress, p.message)
         );
+        throwIfCancelled();
         state.pages.push({ pageNumber: 1, ocr: result, imageSrc: src });
         state.activePage = 1;
         onUpdate({ ...state });
       }
+      throwIfCancelled();
       setStatus({ stage: 'done' });
     } catch (err) {
-      if (err instanceof Error && err.name === 'AbortError') {
+      if (cancelled || (err instanceof Error && err.name === 'AbortError')) {
         logger.info('Scan cancelled by user');
         navigateHome();
         return;

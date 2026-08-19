@@ -22,8 +22,7 @@ interface OcrCanvasProps {
 
 // Overlay strokes use blue-700 (ring) regardless of theme. State is
 // carried by lineWidth and alpha, not hue — per Geist single-accent philosophy.
-const DETECT_STROKE = '#006bff';
-const LOCK_STROKE = '#006bff';
+const STROKE = '#006bff';
 const MIN_ZOOM = 0.25;
 const MAX_ZOOM = 4;
 
@@ -71,7 +70,7 @@ export function OcrCanvas({
           const box = boxes[i];
           if (!box) continue;
           const isHighlighted = i === highlightedIndex;
-          ctx.strokeStyle = isHighlighted ? LOCK_STROKE : DETECT_STROKE;
+          ctx.strokeStyle = STROKE;
           ctx.lineWidth = isHighlighted ? 3 : 2;
           ctx.globalAlpha = isHighlighted ? 1 : 0.7;
 

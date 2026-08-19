@@ -1,11 +1,11 @@
 import { useEffect } from 'react';
 
 const SITE_CONFIG = {
-  BASE_URL: 'https://parsify.dev',
-  SITE_NAME: 'Parsify',
+  BASE_URL: 'https://ocr.um1ng.me',
+  SITE_NAME: 'OCR',
   DEFAULT_LOCALE: 'en_US',
-  TWITTER_HANDLE: '@parsifydev',
-  DEFAULT_OG_IMAGE: 'https://parsify.dev/opengraph-image.png',
+  TWITTER_HANDLE: '@um1ng_x',
+  DEFAULT_OG_IMAGE: 'https://ocr.um1ng.me/opengraph-image.png',
   DEFAULT_OG_IMAGE_WIDTH: 1200,
   DEFAULT_OG_IMAGE_HEIGHT: 630,
 };
@@ -36,8 +36,9 @@ export function useDocumentHead({
   breadcrumbs,
   extraJsonLd,
 }: HeadProps) {
-  const fullTitle =
-    appendSiteName && !title.includes('Parsify.dev') ? `${title} | Parsify.dev` : title;
+  const hasSiteName =
+    title === SITE_CONFIG.SITE_NAME || title.endsWith(` | ${SITE_CONFIG.SITE_NAME}`);
+  const fullTitle = appendSiteName && !hasSiteName ? `${title} | ${SITE_CONFIG.SITE_NAME}` : title;
   const url = new URL(path, SITE_CONFIG.BASE_URL).toString();
 
   useEffect(() => {

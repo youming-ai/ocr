@@ -10,7 +10,7 @@ app.use(
   '*',
   cors({
     origin: (_origin, c) =>
-      (c.env as Record<string, string | undefined>)?.['PUBLIC_ORIGIN'] ?? 'https://parsify.dev',
+      (c.env as Record<string, string | undefined>)?.['PUBLIC_ORIGIN'] ?? 'https://ocr.um1ng.me',
     credentials: false,
   })
 );
@@ -26,9 +26,9 @@ app.get('/health', (c) => c.json({ ok: true }));
 // Robots.txt endpoint
 app.get('/robots.txt', (c) => {
   const origin =
-    (c.env as Record<string, string | undefined>)?.['PUBLIC_ORIGIN'] ?? 'https://parsify.dev';
+    (c.env as Record<string, string | undefined>)?.['PUBLIC_ORIGIN'] ?? 'https://ocr.um1ng.me';
 
-  const content = `# Parsify — robots.txt
+  const content = `# OCR — robots.txt
 
 User-agent: *
 Allow: /
@@ -77,7 +77,7 @@ Crawl-delay: 1
 // Sitemap.xml endpoint
 app.get('/sitemap.xml', (c) => {
   const origin =
-    (c.env as Record<string, string | undefined>)?.['PUBLIC_ORIGIN'] ?? 'https://parsify.dev';
+    (c.env as Record<string, string | undefined>)?.['PUBLIC_ORIGIN'] ?? 'https://ocr.um1ng.me';
   const today = new Date().toISOString().split('T')[0];
 
   const content = `<?xml version="1.0" encoding="UTF-8"?>

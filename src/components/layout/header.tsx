@@ -1,6 +1,5 @@
 import { Link } from '~/components/link';
 import { LanguageToggle } from './language-toggle';
-import { ThemeToggle } from './theme-toggle';
 
 export function Header() {
   return (
@@ -18,12 +17,11 @@ export function Header() {
             <span className="pointer-events-none absolute bottom-0 right-0 h-2 w-2 border-b-2 border-r-2 border-foreground" />
             <span className="h-2 w-2 bg-foreground" />
           </span>
-          <span className="font-mono text-sm font-semibold tracking-[0.18em]">PARSIFY</span>
+          <span className="font-mono text-sm font-semibold tracking-[0.18em]">OCR</span>
         </Link>
 
         <div className="flex items-center gap-2">
           <LanguageToggle />
-          <ThemeToggle />
         </div>
       </div>
     </header>
