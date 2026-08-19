@@ -8,9 +8,74 @@ const MODEL_FILES: Record<ModelName, string> = {
   rec: 'rec.onnx',
 };
 
-const DB_NAME = 'parsify-ocr-models';
+const DB_NAME = 'ocr-models';
+const LEGACY_DB_NAME = 'parsify-ocr-models';
 const DB_VERSION = 3;
 const STORE_NAME = 'models';
+
+let legacyMigration: Promise<void> | null = null;
+async function migrateLegacyCache(): Promise<void> {
+  if (!indexedDB.databases) return;
+  const databases = await indexedDB.databases();
+  if (!databases.some((database) => database.name === LEGACY_DB_NAME)) return;
+
+  const legacyDb = await new Promise<IDBDatabase>((resolve, reject) => {
+    const request = indexedDB.open(LEGACY_DB_NAME);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+
+  try {
+    if (!legacyDb.objectStoreNames.contains(STORE_NAME)) return;
+    const entries = await new Promise<Array<[string, ArrayBuffer]>>((resolve, reject) => {
+      const request = legacyDb
+        .transaction(STORE_NAME, 'readonly')
+        .objectStore(STORE_NAME)
+        .openCursor();
+      const result: Array<[string, ArrayBuffer]> = [];
+      request.onsuccess = () => {
+        const cursor = request.result;
+        if (!cursor) {
+          resolve(result);
+          return;
+        }
+        if (cursor.value instanceof ArrayBuffer) {
+          result.push([String(cursor.key), cursor.value]);
+        }
+        cursor.continue();
+      };
+      request.onerror = () => reject(request.error);
+    });
+
+    if (entries.length > 0) {
+      const db = await openDB();
+      await new Promise<void>((resolve, reject) => {
+        const transaction = db.transaction(STORE_NAME, 'readwrite');
+        const store = transaction.objectStore(STORE_NAME);
+        for (const [key, value] of entries) store.put(value, key);
+        transaction.oncomplete = () => resolve();
+        transaction.onerror = () => reject(transaction.error);
+        transaction.onabort = () => reject(transaction.error);
+      });
+    }
+  } finally {
+    legacyDb.close();
+  }
+
+  await new Promise<void>((resolve, reject) => {
+    const request = indexedDB.deleteDatabase(LEGACY_DB_NAME);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+    request.onblocked = () => resolve();
+  });
+}
+
+function ensureLegacyCacheMigrated(): Promise<void> {
+  legacyMigration ??= migrateLegacyCache().catch((error) => {
+    logger.warn(`Failed to migrate legacy model cache: ${(error as Error).message}`);
+  });
+  return legacyMigration;
+}
 
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -29,6 +94,7 @@ function openDB(): Promise<IDBDatabase> {
 
 async function getCachedModel(name: ModelName): Promise<ArrayBuffer | null> {
   try {
+    await ensureLegacyCacheMigrated();
     const db = await openDB();
     return new Promise((resolve, reject) => {
       const tx = db.transaction(STORE_NAME, 'readonly');

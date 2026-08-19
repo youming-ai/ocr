@@ -1,12 +1,11 @@
 import { ScanText } from 'lucide-react';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useI18n } from '~/components/i18n-provider';
 import { Button } from '~/components/ui/button';
 import { cn } from '~/lib/utils';
 
 interface ImageUploadProps {
   onImageSelect: (file: File) => void;
-  disabled?: boolean;
   className?: string;
 }
 
@@ -21,13 +20,20 @@ const ACCEPTED_TYPES = [
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB
 const PDF_MAX_SIZE = 200 * 1024 * 1024; // 200MB
 
-export function ImageUpload({ onImageSelect, disabled, className }: ImageUploadProps) {
+export function ImageUpload({ onImageSelect, className }: ImageUploadProps) {
   const { t } = useI18n();
   const inputRef = useRef<HTMLInputElement>(null);
+  const previewUrlRef = useRef<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPdf, setIsPdf] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+    };
+  }, []);
 
   const validate = useCallback(
     (file: File): string | null => {
@@ -53,7 +59,10 @@ export function ImageUpload({ onImageSelect, disabled, className }: ImageUploadP
       }
       setError(null);
       setIsPdf(file.type === 'application/pdf');
-      setPreview(URL.createObjectURL(file));
+      const previewUrl = URL.createObjectURL(file);
+      if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+      previewUrlRef.current = previewUrl;
+      setPreview(previewUrl);
       onImageSelect(file);
     },
     [onImageSelect, validate]
@@ -116,16 +125,16 @@ export function ImageUpload({ onImageSelect, disabled, className }: ImageUploadP
           ) : (
             <img src={preview} alt="Uploaded" className="max-h-[400px] w-full object-contain" />
           )}
-          {disabled && <span className="scan-beam" />}
           <Button
             variant="secondary"
             size="sm"
             className="absolute bottom-2 right-2"
             onClick={() => {
+              if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+              previewUrlRef.current = null;
               setPreview(null);
               if (inputRef.current) inputRef.current.value = '';
             }}
-            disabled={disabled}
           >
             {t('upload.change')}
           </Button>
@@ -134,11 +143,10 @@ export function ImageUpload({ onImageSelect, disabled, className }: ImageUploadP
         <button
           type="button"
           className={cn(
-            'relative flex w-full flex-col items-center justify-center overflow-hidden rounded-lg border bg-card p-12 transition-colors',
+            'relative flex w-full cursor-pointer flex-col items-center justify-center overflow-hidden rounded-lg border bg-card p-12 transition-colors',
             isDragging
               ? 'border-foreground bg-foreground/5'
-              : 'border-border hover:border-foreground/50',
-            disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
+              : 'border-border hover:border-foreground/50'
           )}
           onDragOver={(e) => {
             e.preventDefault();
@@ -155,7 +163,6 @@ export function ImageUpload({ onImageSelect, disabled, className }: ImageUploadP
           <span className="pointer-events-none absolute right-3 top-3 h-4 w-4 border-r-2 border-t-2 border-foreground/70" />
           <span className="pointer-events-none absolute bottom-3 left-3 h-4 w-4 border-b-2 border-l-2 border-foreground/70" />
           <span className="pointer-events-none absolute bottom-3 right-3 h-4 w-4 border-b-2 border-r-2 border-foreground/70" />
-          {!disabled && <span className="scan-beam" />}
 
           <span className="mb-1 font-mono text-[10px] tracking-[0.2em] text-muted-foreground">
             {t('upload.idle')}

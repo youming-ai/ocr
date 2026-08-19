@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'bun:test';
 import type { OcrEngine } from '~/lib/ocr/engine';
-import { runScanSession, type ScanSessionState } from '~/lib/ocr/scan-session';
+import {
+  runScanSession,
+  type ScanSessionState,
+  serializeAllPagesDoc,
+  serializeAllPagesJson,
+} from '~/lib/ocr/scan-session';
 import type { OcrResult } from '~/lib/ocr/types';
 
 function createFakeEngine(resultText: string): OcrEngine {
@@ -45,6 +50,35 @@ describe('runScanSession', () => {
     expect(session.state.fileName).toBe('test.png');
   });
 
+  it('does not commit an image result after cancellation', async () => {
+    const { promise: recognizing, resolve: markRecognizing } = Promise.withResolvers<void>();
+    const { promise: recognition, resolve: finishRecognition } = Promise.withResolvers<OcrResult>();
+    const { promise: navigated, resolve: markNavigated } = Promise.withResolvers<void>();
+    const engine = {
+      isReady: true,
+      load: async () => {},
+      recognize: async () => {
+        markRecognizing();
+        return recognition;
+      },
+    } as unknown as OcrEngine;
+    const session = await runScanSession({
+      file: makeImageFile(),
+      engine,
+      onUpdate: () => {},
+      navigateHome: markNavigated,
+      t: (key) => key,
+    });
+
+    await recognizing;
+    session.cancel();
+    finishRecognition({ boxes: [], text: 'SHOULD NOT COMMIT', elapsed: 1 });
+    await navigated;
+
+    expect(session.state.pages).toHaveLength(0);
+    expect(session.state.status.stage).toBe('idle');
+  });
+
   it('notifies cancellation listeners', async () => {
     const { promise: cancelled, resolve } = Promise.withResolvers<void>();
     const session = await runScanSession({
@@ -81,6 +115,8 @@ describe('runScanSession', () => {
     await done;
 
     expect(session.exportAllPagesDoc()).toContain('LINE1');
+    expect(serializeAllPagesDoc(session.state)).toContain('LINE1');
+    expect(JSON.parse(serializeAllPagesJson(session.state)).pages).toHaveLength(1);
     expect(session.exportCurrentDoc()).toBe('LINE1\nLINE2');
   });
 });

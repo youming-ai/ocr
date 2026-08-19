@@ -10,12 +10,22 @@ interface I18nContextValue {
 
 const I18nContext = createContext<I18nContextValue | undefined>(undefined);
 
-const STORAGE_KEY = 'parsify-lang';
+const STORAGE_KEY = 'ocr-lang';
+const LEGACY_STORAGE_KEY = 'parsify-lang';
+
+function isLang(value: string | null): value is Lang {
+  return value === 'en' || value === 'zh' || value === 'ja';
+}
 
 function detectLang(): Lang {
   if (typeof window === 'undefined') return 'en';
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored === 'en' || stored === 'zh' || stored === 'ja') return stored;
+  const current = localStorage.getItem(STORAGE_KEY);
+  const legacy = localStorage.getItem(LEGACY_STORAGE_KEY);
+  const stored = isLang(current) ? current : isLang(legacy) ? legacy : null;
+  if (stored) {
+    if (!current) localStorage.setItem(STORAGE_KEY, stored);
+    return stored;
+  }
   const nav = navigator.language?.toLowerCase() ?? '';
   if (nav.startsWith('zh')) return 'zh';
   if (nav.startsWith('ja')) return 'ja';

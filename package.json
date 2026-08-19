@@ -1,11 +1,11 @@
 {
-  "name": "parsify-dev",
+  "name": "ocr",
   "version": "2.0.0",
   "private": true,
   "description": "On-device OCR powered by PaddleOCR PP-OCRv6. Extract text from images and PDFs — source files never leave your browser.",
-  "homepage": "https://parsify.dev",
-  "repository": "https://github.com/youming-ai/parsify.dev",
-  "bugs": "https://github.com/youming-ai/parsify.dev/issues",
+  "homepage": "https://ocr.um1ng.me",
+  "repository": "https://github.com/youming-ai/ocr",
+  "bugs": "https://github.com/youming-ai/ocr/issues",
   "keywords": [
     "ocr",
     "text-recognition",
@@ -15,7 +15,6 @@
     "browser",
     "wasm",
     "pdf",
-    "ai-cleanup",
     "image-to-text"
   ],
   "author": "Youming <ikashue@gmail.com>",

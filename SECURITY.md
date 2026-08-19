@@ -2,7 +2,7 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in Parsify, please report it responsibly.
+If you discover a security vulnerability in OCR, please report it responsibly.
 
 **Do NOT open a public GitHub issue for security vulnerabilities.**
 
@@ -30,32 +30,24 @@ Send an email to **ikashue@gmail.com** with:
 
 ## Security Measures
 
-### API Key Protection
+### Client-side processing
 
-- `DEEPSEEK_API_KEY` and `JINA_API_KEY` are read from `process.env` only
-- Keys are never sent from the browser
-- Keys are never logged
-- Keys are never persisted (no database, no cache, no file)
-- Keys are never echoed in API responses
-- pino logger redacts `*.apiKey`, `*.headers.authorization`, `*.headers.cookie`
+- OCR models and document processing run in the browser.
+- Source files are not uploaded to an OCR or LLM service.
+- The backend exposes only static metadata, health checks, and SEO assets.
 
-### SSRF Protection
+### API and deployment boundaries
 
-The `parseRequestSchema` includes an SSRF guard that rejects:
-- Loopback addresses (127.x, ::1, localhost)
-- Private networks (10.x, 172.16-31.x, 192.168.x)
-- Link-local addresses (169.254.x)
+- CORS uses the configured `PUBLIC_ORIGIN`, with the production origin as fallback.
+- Security headers are applied to API responses.
+- API errors return generic messages and do not expose internal exceptions.
+- No application API keys are required for OCR or local development.
 
-### Rate Limiting
+### Input handling
 
-- `/api/agent` is rate-limited to 20 requests per 15 minutes per IP
-- Single-container deployment assumption
-
-### Input Validation
-
-- All API inputs are validated using Zod schemas
-- URL validation includes scheme checking (http/https only)
-- Markdown content is size-limited (1 MB for agent, 5 MB for parse response)
+- The browser accepts only PNG, JPEG, WebP, BMP, TIFF, and PDF files.
+- Images are limited to 10 MB; PDFs are limited to 200 MB.
+- PDF rendering is capped at 50 pages by default to bound browser memory usage.
 
 ## Supported Versions
 

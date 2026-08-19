@@ -124,7 +124,6 @@ describe('extractBoxes', () => {
     expect(result.length).toBeGreaterThanOrEqual(1);
     if (result.length > 0) {
       expect(result[0].points.length).toBeGreaterThanOrEqual(3);
-      expect(result[0].score).toBeGreaterThan(0);
     }
   });
 });

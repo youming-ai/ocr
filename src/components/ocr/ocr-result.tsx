@@ -2,7 +2,7 @@ import { useI18n } from '~/components/i18n-provider';
 import type { TextBox } from '~/lib/ocr/types';
 import { cn } from '~/lib/utils';
 
-interface OcrResultProps {
+interface OcrResultListProps {
   boxes: TextBox[];
   highlightedIndex: number | null;
   onBoxHover: (index: number | null) => void;
@@ -13,7 +13,12 @@ interface OcrResultProps {
  * Per-line recognition view. Each line maps to a detection box, so hovering a
  * line highlights its region on the source canvas (and vice-versa).
  */
-export function OcrResult({ boxes, highlightedIndex, onBoxHover, className }: OcrResultProps) {
+export function OcrResultList({
+  boxes,
+  highlightedIndex,
+  onBoxHover,
+  className,
+}: OcrResultListProps) {
   const { t } = useI18n();
   if (boxes.length === 0) {
     return <p className={cn('text-sm text-muted-foreground', className)}>{t('output.noLines')}</p>;

@@ -182,4 +182,4 @@ export class OcrPipeline {
 }
 
 // ponytail: recognition runs per-box. Batch inference is tracked in
-// https://github.com/youming-ai/parsify.dev/issues (if filed).
+// https://github.com/youming-ai/ocr/issues (if filed).

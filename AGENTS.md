@@ -1,7 +1,7 @@
 # Repository Guidelines
 
 ## Project Overview
-Parsify is a privacy-first, fully client-side OCR (Optical Character Recognition) application. Users upload an image or PDF, and PaddleOCR PP-OCRv6 small runs completely within the browser via ONNX Runtime Web (WASM). A comparison interface displays the source vs. extracted text. All files remain strictly local; there is no server-side OCR and no external AI/LLM processing. The backend `/api` layer only serves static metadata, health checks, and SEO assets.
+OCR is a privacy-first, fully client-side OCR (Optical Character Recognition) application. Users upload an image or PDF, and PaddleOCR PP-OCRv6 small runs completely within the browser via ONNX Runtime Web (WASM). A comparison interface displays the source vs. extracted text. All files remain strictly local; there is no server-side OCR and no external AI/LLM processing. The backend `/api` layer only serves static metadata, health checks, and SEO assets.
 
 *Note: The project was previously a server-side Jina Reader + DeepSeek SEO tool. All Jina/DeepSeek API endpoints, SSRF validation guards, and server-side rate limits are deprecated or deleted. Ignore stale documentation referencing them.*
 
@@ -44,7 +44,7 @@ Manage and run tasks via Bun:
 | `bun run dev:ui` | Starts Vite frontend dev server only |
 | `bun run dev:api` | Starts backend dev server on `:3001` only |
 | `bun run build` | Builds frontend assets (`dist/client`) and generates router routes |
-| `bun run start` | Runs production server (`dist/server/entry.server.js` or `src/prod-server.ts`) |
+| `bun run start` | Runs the production server via `src/prod-server.ts` |
 | `bun run deploy` | Vite build followed by `wrangler deploy` to Cloudflare |
 | `bun run typecheck` | Runs `tsc --noEmit` |
 | `bun run lint` | Runs Biome code checks on `src/` |
@@ -53,7 +53,7 @@ Manage and run tasks via Bun:
 | `bun test` | Runs the test suite |
 | `bun test <file>` | Runs a specific test file (e.g. `bun test src/__tests__/lib/ocr/pipeline.test.ts`) |
 
-*Note: The `postinstall` script automatically fetches and copies ONNX SIMD WASM binaries and PDF.js workers to `public/`. If WASM or worker files 404 on fresh builds, execute `bun install`.*
+*Note: the `postinstall` script copies ONNX SIMD WASM binaries and the PDF.js worker from `node_modules` into `public/`. If WASM or worker files 404 on fresh builds, execute `bun install`.*
 
 ## Code Conventions & Common Patterns
 - **Formatting & Style**: Strictly enforced by Biome (2-space indents, single quotes, mandatory semicolons, ES5 trailing commas). Unused variables and imports are treated as compilation errors.
@@ -70,7 +70,7 @@ Manage and run tasks via Bun:
   - Layer 2: Full Geist gray/accent palette (e.g. `bg-blue-700`, `text-gray-900`).
   - Layer 3: Geometry/motion/elevation.
   - Accent scale: Accent color is pinned to a single scale (e.g., `blue-700`).
-  - Dark mode: Triggered by adding the `.dark` class to `<html>`. Toggle is managed by `theme-provider.tsx`.
+  - Dark theme is out of scope; the current application is light-only and the toggle is a deprecated no-op placeholder.
 - **Imports**: Import UI primitives from `~/components/ui/` and use `cn()` from `~/lib/utils` for Tailwind CSS class merging.
 - **Security / Randomness**: Always use Web Crypto API (`crypto.subtle`) for security-critical actions. Never use `Math.random()`.
 - **Commit Attribution**:

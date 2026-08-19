@@ -1,35 +1,31 @@
 <!doctype html>
-<html lang="en" data-theme="light">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
-    <title>Parsify — Your Files Never Leave Your Device</title>
+    <title>OCR — Your Files Never Leave Your Device</title>
     <meta name="description" content="On-device OCR powered by PaddleOCR PP-OCRv6. Extract text from images and PDFs — source files never leave your browser." />
-    <link rel="canonical" href="https://parsify.dev/" />
+    <link rel="canonical" href="https://ocr.um1ng.me/" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#0a0d14" />
+    <meta name="theme-color" content="#ffffff" />
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="Parsify — Your Files Never Leave Your Device" />
+    <meta property="og:title" content="OCR — Your Files Never Leave Your Device" />
     <meta property="og:description" content="On-device OCR powered by PaddleOCR PP-OCRv6. Extract text from images and PDFs — source files never leave your browser." />
-    <meta property="og:url" content="https://parsify.dev/" />
-    <meta property="og:site_name" content="Parsify" />
+    <meta property="og:url" content="https://ocr.um1ng.me/" />
+    <meta property="og:site_name" content="OCR" />
     <meta property="og:locale" content="en_US" />
-    <meta property="og:image" content="https://parsify.dev/opengraph-image.png" />
+    <meta property="og:image" content="https://ocr.um1ng.me/opengraph-image.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@parsifydev" />
-    <meta name="twitter:title" content="Parsify — Your Files Never Leave Your Device" />
+    <meta name="twitter:site" content="@um1ng_x" />
+    <meta name="twitter:title" content="OCR — Your Files Never Leave Your Device" />
     <meta name="twitter:description" content="On-device OCR powered by PaddleOCR PP-OCRv6. Extract text from images and PDFs — source files never leave your browser." />
-    <meta name="twitter:image" content="https://parsify.dev/opengraph-image.png" />
+    <meta name="twitter:image" content="https://ocr.um1ng.me/opengraph-image.png" />
     <script>
-      var stored = localStorage.getItem('parsify-theme');
-      var theme = stored !== null ? stored : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-      if (theme === 'dark') document.documentElement.classList.add('dark');
-
-      var storedLang = localStorage.getItem('parsify-lang');
+      var storedLang = localStorage.getItem('ocr-lang');
       var lang = (storedLang === 'en' || storedLang === 'zh' || storedLang === 'ja') ? storedLang
         : ((navigator.language || '').toLowerCase().indexOf('zh') === 0 ? 'zh' : 'en');
       document.documentElement.lang = lang === 'zh' ? 'zh-CN' : lang;
@@ -38,13 +34,13 @@
     {
       "@context": "https://schema.org",
       "@type": "WebApplication",
-      "name": "Parsify",
-      "url": "https://parsify.dev",
+      "name": "OCR",
+      "url": "https://ocr.um1ng.me",
       "description": "On-device OCR powered by PaddleOCR PP-OCRv6. Extract text from images and PDFs — source files never leave your browser.",
       "applicationCategory": "DeveloperApplication",
       "operatingSystem": "Web",
       "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
-      "publisher": { "@type": "Organization", "name": "Parsify.dev", "url": "https://parsify.dev" }
+      "publisher": { "@type": "Organization", "name": "OCR", "url": "https://ocr.um1ng.me" }
     }
     </script>
   </head>
