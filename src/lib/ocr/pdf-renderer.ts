@@ -1,6 +1,5 @@
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 import * as pdfjsLib from 'pdfjs-dist';
-import { logger } from '~/lib/logger';
 
 // Serve the pdf.js worker from our own origin (copied into /public by the
 // postinstall step) rather than a third-party CDN, so PDF OCR is not broken by
@@ -73,7 +72,7 @@ export async function renderPdfPages(
     const pagesToRender = Math.min(totalPages, maxPages);
 
     if (totalPages > maxPages) {
-      logger.warn(`PDF has ${totalPages} pages, limiting to ${maxPages}`);
+      console.warn(`[WARN] PDF has ${totalPages} pages, limiting to ${maxPages}`);
     }
 
     const pages: string[] = [];
@@ -118,7 +117,7 @@ export async function renderPdfPages(
       }
     }
 
-    logger.info(`Rendered ${pages.length}/${totalPages} PDF pages`);
+    console.log(`[INFO] Rendered ${pages.length}/${totalPages} PDF pages`);
 
     return { pages, totalPages };
   } finally {

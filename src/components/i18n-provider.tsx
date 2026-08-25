@@ -11,6 +11,7 @@ interface I18nContextValue {
 const I18nContext = createContext<I18nContextValue | undefined>(undefined);
 
 const STORAGE_KEY = 'ocr-lang';
+// ponytail: legacy key from pre-rename (parsify → ocr). Delete after 2026-10-01.
 const LEGACY_STORAGE_KEY = 'parsify-lang';
 
 function isLang(value: string | null): value is Lang {

@@ -1,5 +1,4 @@
 import type { TranslationKey } from '~/lib/i18n/translations';
-import { logger } from '~/lib/logger';
 import type { OcrEngine } from './engine';
 import type { OcrProgress, PdfPageResult } from './types';
 
@@ -181,7 +180,7 @@ export async function runScanSession(deps: ScanDeps): Promise<ScanSession> {
   function handleError(err: unknown) {
     if (cancelled) return;
     const message = err instanceof Error ? err.message : t('error.ocrFailed');
-    logger.error(`Scan failed: ${message}`);
+    console.error(`[ERROR] Scan failed: ${message}`);
     setStatus({ stage: 'error', message });
     revokeAll();
   }
@@ -246,7 +245,7 @@ export async function runScanSession(deps: ScanDeps): Promise<ScanSession> {
       setStatus({ stage: 'done' });
     } catch (err) {
       if (cancelled || (err instanceof Error && err.name === 'AbortError')) {
-        logger.info('Scan cancelled by user');
+        console.log('[INFO] Scan cancelled by user');
         navigateHome();
         return;
       }

@@ -1,5 +1,4 @@
 import * as ort from 'onnxruntime-web/wasm';
-import { logger } from '~/lib/logger';
 
 export type ModelName = 'det' | 'rec';
 
@@ -9,6 +8,7 @@ const MODEL_FILES: Record<ModelName, string> = {
 };
 
 const DB_NAME = 'ocr-models';
+// ponytail: legacy IndexedDB name from pre-rename (parsify → ocr). Delete after 2026-10-01 if no migration hits in prod logs.
 const LEGACY_DB_NAME = 'parsify-ocr-models';
 const DB_VERSION = 3;
 const STORE_NAME = 'models';
@@ -72,7 +72,7 @@ async function migrateLegacyCache(): Promise<void> {
 
 function ensureLegacyCacheMigrated(): Promise<void> {
   legacyMigration ??= migrateLegacyCache().catch((error) => {
-    logger.warn(`Failed to migrate legacy model cache: ${(error as Error).message}`);
+    console.warn(`[WARN] Failed to migrate legacy model cache: ${(error as Error).message}`);
   });
   return legacyMigration;
 }
@@ -195,16 +195,16 @@ export async function loadModels(
     const fromCache = buffer !== null;
 
     if (!buffer) {
-      logger.info(`Downloading model: ${name}`);
+      console.log(`[INFO] Downloading model: ${name}`);
       buffer = await fetchModel(name, baseUrl);
       try {
         await setCachedModel(name, buffer);
-        logger.info(`Cached model: ${name} (${(buffer.byteLength / 1024).toFixed(1)}KB)`);
+        console.log(`[INFO] Cached model: ${name} (${(buffer.byteLength / 1024).toFixed(1)}KB)`);
       } catch (cacheErr) {
-        logger.warn(`Failed to cache model ${name}: ${(cacheErr as Error).message}`);
+        console.warn(`[WARN] Failed to cache model ${name}: ${(cacheErr as Error).message}`);
       }
     } else {
-      logger.info(`Loaded model from cache: ${name}`);
+      console.log(`[INFO] Loaded model from cache: ${name}`);
     }
 
     onModelLoaded?.(name, fromCache);
@@ -222,7 +222,7 @@ export async function loadModels(
         err instanceof Error &&
         err.message.includes('protobuf parsing failed')
       ) {
-        logger.warn(`Cached model ${name} failed protobuf validation; re-fetching`);
+        console.warn(`[WARN] Cached model ${name} failed protobuf validation; re-fetching`);
         await deleteCachedModel(name);
         return loadOne(name, false);
       }

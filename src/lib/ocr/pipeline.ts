@@ -1,5 +1,4 @@
 import * as ort from 'onnxruntime-web';
-import { logger } from '~/lib/logger';
 import type { LoadedModels } from './model-loader';
 import { decodeCtc, extractBoxes, sortBoxes } from './postprocessor';
 import { cropRegion, imageToPixels, loadImage, normalizeForRec, resizeImage } from './preprocessor';
@@ -123,7 +122,7 @@ export class OcrPipeline {
           textBoxes.push({ points, text, confidence });
         }
       } catch (err) {
-        logger.warn(`Failed to recognize box ${i}: ${err}`);
+        console.warn(`[WARN] Failed to recognize box ${i}: ${err}`);
       }
     }
 
