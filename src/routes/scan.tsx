@@ -49,7 +49,7 @@ function ScanPage() {
 
   const sessionRef = useRef<ScanSession | null>(null);
   const startedRef = useRef(false);
-  const startCancelledRef = useRef(false);
+  const cancelledRef = useRef(false);
   const navigateHome = useCallback(() => navigate({ to: '/', replace: true }), [navigate]);
 
   const onUpdate = useCallback((next: ScanSessionState) => {
@@ -57,18 +57,18 @@ function ScanPage() {
   }, []);
 
   useEffect(() => {
+    const doCancel = () => {
+      cancelledRef.current = true;
+      sessionRef.current?.cancel();
+      sessionRef.current = null;
+    };
     if (startedRef.current) {
-      // StrictMode: every real mount must register a cleanup. The second
-      // invocation is a no-op, but its cleanup will run on actual unmount.
-      startCancelledRef.current = false;
-      return () => {
-        startCancelledRef.current = true;
-        sessionRef.current?.cancel();
-        sessionRef.current = null;
-      };
+      // StrictMode second mount is no-op but must register cleanup for real unmount.
+      cancelledRef.current = false;
+      return doCancel;
     }
     startedRef.current = true;
-    startCancelledRef.current = false;
+    cancelledRef.current = false;
 
     const file = takePendingFile();
     if (!file) {
@@ -78,28 +78,14 @@ function ScanPage() {
 
     const start = async () => {
       const engine = await getEngine();
-      if (startCancelledRef.current) return;
-      const session = await runScanSession({
-        file,
-        engine,
-        onUpdate,
-        navigateHome,
-        t,
-      });
-      if (startCancelledRef.current) {
-        session.cancel();
-        return;
-      }
-      sessionRef.current = session;
+      if (cancelledRef.current) return;
+      const session = await runScanSession({ file, engine, onUpdate, navigateHome, t });
+      if (cancelledRef.current) session.cancel();
+      else sessionRef.current = session;
     };
 
     void start();
-
-    return () => {
-      startCancelledRef.current = true;
-      sessionRef.current?.cancel();
-      sessionRef.current = null;
-    };
+    return doCancel;
   }, [navigateHome, onUpdate, t]);
 
   const activeResult = state.pages[state.activePage - 1]?.ocr ?? null;

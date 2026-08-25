@@ -4,8 +4,8 @@
   "description": "On-device OCR powered by PaddleOCR PP-OCRv6. Extract text from images and PDFs — source files never leave your browser.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0a0d14",
-  "theme_color": "#0a0d14",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
   "orientation": "portrait",
   "categories": ["developer", "tools", "productivity", "utilities"],
   "icons": [

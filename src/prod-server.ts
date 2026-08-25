@@ -1,30 +1,10 @@
 import { extname, join, resolve, sep } from 'node:path';
-import { logger } from '~/lib/logger';
 import { app } from '~/server/hono';
 
 const PORT = Number(process.env['PORT'] ?? '5173');
 const STATIC_ROOT = resolve(
   process.env['STATIC_ROOT'] ?? join(import.meta.dir, '..', 'dist', 'client')
 );
-
-const MIME_TYPES: Record<string, string> = {
-  '.css': 'text/css; charset=utf-8',
-  '.gif': 'image/gif',
-  '.html': 'text/html; charset=utf-8',
-  '.ico': 'image/x-icon',
-  '.jpeg': 'image/jpeg',
-  '.jpg': 'image/jpeg',
-  '.js': 'text/javascript; charset=utf-8',
-  '.json': 'application/json; charset=utf-8',
-  '.mjs': 'text/javascript; charset=utf-8',
-  '.onnx': 'application/octet-stream',
-  '.png': 'image/png',
-  '.svg': 'image/svg+xml; charset=utf-8',
-  '.txt': 'text/plain; charset=utf-8',
-  '.wasm': 'application/wasm',
-  '.webmanifest': 'application/manifest+json; charset=utf-8',
-  '.xml': 'application/xml; charset=utf-8',
-};
 
 const env = {
   PUBLIC_ORIGIN: process.env['PUBLIC_ORIGIN'] ?? `http://localhost:${PORT}`,
@@ -60,10 +40,14 @@ async function staticResponse(pathname: string): Promise<Response> {
     file = Bun.file(servedPath);
   }
 
-  const extension = extname(servedPath).toLowerCase();
-  const headers = new Headers({
-    'content-type': MIME_TYPES[extension] ?? 'application/octet-stream',
-  });
+  // Bun.file.type does MIME sniffing; fallback for .onnx/.wasm where it returns empty.
+  const fallback: Record<string, string> = {
+    '.onnx': 'application/octet-stream',
+    '.wasm': 'application/wasm',
+  };
+  const mime =
+    file.type || fallback[extname(servedPath).toLowerCase()] || 'application/octet-stream';
+  const headers = new Headers({ 'content-type': mime });
 
   if (pathname.startsWith('/assets/')) {
     headers.set('cache-control', 'public, max-age=31536000, immutable');
@@ -88,4 +72,4 @@ Bun.serve({
   port: PORT,
 });
 
-logger.info(`Production server running on http://localhost:${PORT}`);
+console.log(`[INFO] Production server running on http://localhost:${PORT}`);

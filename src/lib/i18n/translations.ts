@@ -12,7 +12,6 @@ const en = {
   'upload.idle': 'SCANNER · IDLE',
   'upload.drop': 'Drop an image to scan',
   'upload.hint': 'or paste from clipboard · click to browse',
-  'upload.change': 'Change image',
   'upload.aria': 'Upload an image or PDF to scan',
   'upload.errFormat': 'Unsupported format. Please use PNG, JPEG, WebP, BMP, TIFF, or PDF.',
   'upload.errSize': 'File too large. Maximum size is {mb}MB.',
@@ -76,7 +75,6 @@ const zh: Record<TranslationKey, string> = {
   'upload.idle': '扫描器 · 待机',
   'upload.drop': '拖入图片开始扫描',
   'upload.hint': '或从剪贴板粘贴 · 点击选择文件',
-  'upload.change': '更换图片',
   'upload.aria': '上传图片或 PDF 进行扫描',
   'upload.errFormat': '不支持的格式。请使用 PNG、JPEG、WebP、BMP、TIFF 或 PDF。',
   'upload.errSize': '文件过大，最大 {mb}MB。',
@@ -134,7 +132,6 @@ const ja: Record<TranslationKey, string> = {
   'upload.idle': 'スキャナー · 待機中',
   'upload.drop': '画像をドロップしてスキャン',
   'upload.hint': 'またはクリップボードから貼り付け · クリックして選択',
-  'upload.change': '画像を変更',
   'upload.aria': 'スキャンする画像または PDF をアップロード',
   'upload.errFormat':
     '対応していない形式です。PNG、JPEG、WebP、BMP、TIFF、PDF のいずれかを使用してください。',

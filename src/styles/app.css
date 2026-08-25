@@ -257,6 +257,46 @@
 
 }
 
+/* ── Looping scan beam (idle) ────────────────────────────── */
+@keyframes scan-y {
+  0% {
+    top: 4%;
+  }
+  100% {
+    top: 96%;
+  }
+}
+
+.scan-beam {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--color-ring) 25%,
+    var(--color-ring) 75%,
+    transparent
+  );
+  box-shadow: 0 0 10px 1px color-mix(in srgb, var(--color-ring) 70%, transparent);
+  animation: scan-y 2.6s cubic-bezier(0.4, 0, 0.6, 1) infinite alternate;
+}
+
+.dark .scan-beam {
+  box-shadow:
+    0 0 16px 3px color-mix(in srgb, var(--color-ring) 90%, transparent),
+    0 0 6px 1px var(--color-ring);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scan-beam {
+    animation: none;
+    opacity: 0;
+  }
+}
+
 /* ── One-shot scan beam ──────────────────────────────────── */
 
 @keyframes scan-once {
