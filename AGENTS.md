@@ -33,7 +33,6 @@ The Hono backend API (`src/server/hono.ts`) is mounted at `/api` and serves `/he
 - `src/components/ui/`: UI primitives styled with shadcn/ui.
 - `src/styles/`: Tailwind CSS entrypoint (`app.css`) and global theme configurations.
 - `src/__tests__/`: Unit tests for pure OCR utility functions.
-- `docs/superpowers/`: Project planning, specs, design tokens, and slimming proposals.
 
 ## Development Commands
 Manage and run tasks via Bun:
