@@ -1,0 +1,53 @@
+{
+  "fixtures": [
+    {
+      "file": "en1.png",
+      "text": "The quick brown fox",
+      "width": 1013,
+      "height": 121,
+      "note": "BGRA pixel order, ink bbox + 8px pad, single text line"
+    },
+    {
+      "file": "en2.png",
+      "text": "lazy dog 0123456789",
+      "width": 1072,
+      "height": 121,
+      "note": "BGRA pixel order, ink bbox + 8px pad, single text line"
+    },
+    {
+      "file": "zh1.png",
+      "text": "今天的天气很好，我们一起去公园散步吧。",
+      "width": 2502,
+      "height": 146,
+      "note": "BGRA pixel order, ink bbox + 8px pad, single text line"
+    },
+    {
+      "file": "zh2.png",
+      "text": "这项技术可以在不联网的情况下识别图片中的文字。",
+      "width": 2503,
+      "height": 146,
+      "note": "BGRA pixel order, ink bbox + 8px pad, single text line"
+    },
+    {
+      "file": "zh3.png",
+      "text": "2026年9月，第一版上线，支持中英文和数字。",
+      "width": 2503,
+      "height": 146,
+      "note": "BGRA pixel order, ink bbox + 8px pad, single text line"
+    },
+    {
+      "file": "ja1.png",
+      "text": "こんにちは、日本語のテキスト認識テストです。",
+      "width": 2502,
+      "height": 122,
+      "note": "BGRA pixel order, ink bbox + 8px pad, single text line"
+    },
+    {
+      "file": "lat1.png",
+      "text": "café über naïve à côté Señor Müller",
+      "width": 2430,
+      "height": 119,
+      "note": "BGRA pixel order, ink bbox + 8px pad, single text line"
+    }
+  ]
+}

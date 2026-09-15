@@ -13,14 +13,28 @@ On-device OCR models loaded by `src/lib/ocr/model-loader.ts` via ONNX Runtime We
   The small model build does not ship a cls model, and the UI is a two-stage
   detection → recognition flow.
 
-## Language support
+## Language support — KNOWN ISSUE (non-ASCII)
 
-Unified multilingual recognition: **Simplified/Traditional Chinese, English,
-Japanese (incl. hiragana 86 + katakana 94), and 46 Latin-script languages** (French,
-German, Spanish, Vietnamese, …), plus Greek. Dict has 15565 CJK ideographs.
+> **Every non-ASCII script currently decodes as mojibake** (e.g. `本` → `æœ¬`, `é` →
+> `Ã©`): the released checkpoint transcribes non-ASCII glyphs as the CP1252 rendering of their
+> UTF-8 bytes, and several byte values are missing from the dictionary so the text cannot be
+> reconstructed downstream. ASCII/English decodes perfectly. This reproduces on PP-OCRv5 mobile,
+> on RapidAI's re-export of this model, and identically under Python onnxruntime and
+> onnxruntime-web; the ONNX head weight is byte-identical to the official `inference.pdiparams`.
+> Full evidence and a paste-ready upstream issue: [`docs/upstream-rec-non-ascii.md`](../../../docs/upstream-rec-non-ascii.md)
+> (repo-root `docs/`, not shipped with the site). `bun scripts/verify-rec-model.ts` reproduces.
+>
+> Until upstream resolves this, treat the app as **English/ASCII-first**.
+
+Nominal coverage (what the dictionary contains, pending the fix above): Simplified/Traditional
+Chinese, English, Japanese (incl. hiragana 86 + katakana 94), and 46 Latin-script languages
+(French, German, Spanish, Vietnamese, …), plus Greek. Dict has 15565 CJK ideographs.
 
 Not covered (need a PP-OCRv5 per-language rec model instead): Korean (Hangul),
-Cyrillic (Russian/…), Arabic, Devanagari (Hindi/…), Thai, Tamil, Telugu.
+Cyrillic (Russian/…), Arabic, Devanagari (Hindi/…), Thai, Tamil, Telugu. Note: those
+per-language models were *not* affected in our spot checks (RapidOCR's regression suite covers
+them with exact non-ASCII assertions), so they are the likeliest fallback if a language-specific
+rec model is needed before the unified ones are fixed.
 
 ## How to obtain
 
