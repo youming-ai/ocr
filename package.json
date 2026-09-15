@@ -31,7 +31,7 @@
     "lint": "biome check ./src",
     "lint:fix": "biome check --fix ./src",
     "format": "biome format --write ./src",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json --noEmit",
     "test": "bun test",
     "clean": "rm -rf node_modules dist .output",
     "postinstall": "mkdir -p public/ort && cp node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.mjs node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.wasm public/ort/ && cp node_modules/pdfjs-dist/build/pdf.worker.min.mjs public/pdf.worker.min.mjs"
@@ -39,34 +39,34 @@
   "dependencies": {
     "@fontsource-variable/geist": "^5.3.0",
     "@fontsource-variable/geist-mono": "^5.3.0",
-    "@tailwindcss/vite": "^4.3.3",
-    "@tanstack/react-router": "^1.170.31",
+    "@tanstack/react-router": "^1.170.32",
     "clsx": "^2.1.1",
-    "hono": "^4.13.3",
-    "lucide-react": "^1.33.0",
-    "onnxruntime-web": "^1.27.0",
+    "hono": "^4.13.5",
+    "lucide-react": "^1.34.0",
+    "onnxruntime-web": "^1.29.0",
     "pdfjs-dist": "^6.2.108",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "tailwind-merge": "^2.6.1",
-    "tailwindcss": "^4.3.3"
+    "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.9",
-    "@cloudflare/vite-plugin": "^1.53.1",
+    "@biomejs/biome": "^2.5.11",
+    "@cloudflare/vite-plugin": "^1.54.1",
     "@cloudflare/workers-types": "^4.20260702.1",
-    "@tanstack/router-plugin": "^1.168.34",
+    "@tailwindcss/vite": "^4.3.3",
+    "@tanstack/router-plugin": "^1.168.35",
     "@types/node": "^22.20.1",
     "@types/react": "^19.2.18",
-    "@types/react-dom": "^19.2.4",
+    "@types/react-dom": "^19.2.5",
     "@vitejs/plugin-react": "^5.2.0",
     "bun-types": "^1.4.0",
     "lefthook": "^2.1.10",
+    "tailwindcss": "^4.3.3",
     "typescript": "^6.0.3",
     "vite": "^7.3.6"
   },
   "engines": {
     "node": ">=20"
   },
-  "packageManager": "bun@1.3.5"
+  "packageManager": "bun@1.4.0"
 }

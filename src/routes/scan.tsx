@@ -79,22 +79,18 @@ function ScanPage() {
     const start = async () => {
       const engine = await getEngine();
       if (cancelledRef.current) return;
-      const session = await runScanSession({ file, engine, onUpdate, navigateHome, t });
+      const session = await runScanSession({ file, engine, onUpdate, navigateHome });
       if (cancelledRef.current) session.cancel();
       else sessionRef.current = session;
     };
 
     void start();
     return doCancel;
-  }, [navigateHome, onUpdate, t]);
+  }, [navigateHome, onUpdate]);
 
   const activeResult = state.pages[state.activePage - 1]?.ocr ?? null;
   const isProcessing = state.status.stage !== 'done' && state.status.stage !== 'error';
-  const isError = state.status.stage === 'error';
-  const errorMessage =
-    isError && 'message' in state.status && typeof state.status.message === 'string'
-      ? state.status.message
-      : null;
+  const errorStatus = state.status.stage === 'error' ? state.status : null;
 
   const progress: OcrProgress | null =
     state.status.stage === 'loading' || state.status.stage === 'processing'
@@ -122,7 +118,9 @@ function ScanPage() {
       a.download = 'ocr-result.txt';
     }
     a.click();
-    URL.revokeObjectURL(url);
+    // Revoking in the same tick cancels the download in some browsers; give the
+    // navigation a moment to be committed first.
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
   const navigateToPage = useCallback((page: number) => {
@@ -177,10 +175,17 @@ function ScanPage() {
         </div>
       )}
 
-      {errorMessage && (
+      {errorStatus && (
         <div className="mb-4 flex items-start gap-2 rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
           <span className="font-mono text-[11px] tracking-wider">{t('common.error')}</span>
-          <span>{errorMessage}</span>
+          <span className="min-w-0">
+            <span className="block">{t(errorStatus.errorKey)}</span>
+            {errorStatus.detail ? (
+              <span className="mt-0.5 block break-words font-mono text-[11px] text-destructive/70">
+                {errorStatus.detail}
+              </span>
+            ) : null}
+          </span>
         </div>
       )}
 

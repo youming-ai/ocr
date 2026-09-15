@@ -1,8 +1,6 @@
 User-agent: *
 Allow: /
 Disallow: /api/
-Disallow: /_build/
-Disallow: /_assets/
 
 # LLM crawlers are allowed everywhere; /llm.txt is the canonical metadata page.
 User-agent: GPTBot
@@ -28,7 +26,3 @@ Disallow: /
 
 # Sitemaps
 Sitemap: https://ocr.um1ng.me/sitemap.xml
-
-# Crawl-delay
-User-agent: *
-Crawl-delay: 1

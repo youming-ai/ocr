@@ -14,25 +14,27 @@ The core OCR flow runs entirely in the browser, orchestrated by `OcrEngine` (`sr
 2. **Scan Route**: `src/routes/scan.tsx` fetches the file using `takePendingFile()` on mount. It utilizes a `startedRef` guard to ensure the pipeline runs exactly once under React StrictMode.
 3. **Model Loading & Caching**: `src/lib/ocr/model-loader.ts` downloads `det.onnx`, `rec.onnx`, and `ppocrv6_dict.txt` from `/models/pp-ocrv6-small/` on the first run, caches the buffers in IndexedDB, and initializes the `onnxruntime-web` sessions.
 4. **PDF Handling**: If the input is a PDF, `src/lib/ocr/pdf-renderer.ts` renders pages one by one using a PDF.js worker thread to bound peak memory usage.
-5. **Preprocessing**: `src/lib/ocr/preprocessor.ts` resizes the image, snaps dimensions to multiples of 32 (detector requirement), converts it to a Float32 tensor in CHW format, and normalizes pixel values.
-6. **Inference Pipeline**: `src/lib/ocr/pipeline.ts` runs detection and feeds cropped tensors to the recognition model. Direction classification is intentionally not used in the current PP-OCRv6 small deployment.
-7. **Postprocessing**: `src/lib/ocr/postprocessor.ts` applies Non-Maximum Suppression (NMS) on bounding boxes, sorts coordinate regions, and decodes recognition scores into character strings using CTC greedy decoding.
+5. **Preprocessing**: `src/lib/ocr/preprocessor.ts` resizes the image, snaps dimensions to multiples of 32 (detector requirement), and produces a raw CHW Float32 buffer in **BGR** order scaled to `[0,1]`. That buffer is deliberately model-agnostic; `normalizeForDet()` applies the detector's ImageNet mean/std and `normalizeForRec()` applies the recogniser's `(x - 0.5) / 0.5`. Both models were exported from a PaddleOCR `PreProcess` that decodes with `img_mode: BGR` and has no normalization baked into the graph, so the channel order and the per-model normalization must not be merged or dropped — see `public/models/pp-ocrv6-small/README.md`.
+6. **Inference Pipeline**: `src/lib/ocr/pipeline.ts` runs detection and feeds cropped tensors to the recognition model. Crops are taken from the *raw* buffer, so recognition re-normalizes them itself. Direction classification is intentionally not used in the current PP-OCRv6 small deployment.
+7. **Postprocessing**: `src/lib/ocr/postprocessor.ts` thresholds the DBNet probability map, drops boxes whose mean score is below `box_threshold` (0.45), applies the unclip ratio, then Non-Maximum Suppression, sorts coordinate regions, and decodes recognition scores into character strings using CTC greedy decoding. Defaults mirror the detector's published postprocess config (`thresh 0.2`, `box_thresh 0.45`, `unclip_ratio 1.4`).
 8. **Character Translation**: `OcrEngine` translates class indices using the embedded or external character dictionary (`ppocrv6_dict.txt`). The recognition model's class size must strictly match `dict length + 2` (prepended CTC blank index 0 and a trailing space; currently 18710 classes for 18708 dictionary entries).
 
+**Known limitation (do not "fix" locally)**: the shipped PP-OCRv6 rec checkpoint transcribes every non-ASCII character as the CP1252 rendering of its UTF-8 bytes (e.g. `本` → `æœ¬`), and several byte values are absent from the dictionary so the text is unrecoverable downstream. ASCII/English is unaffected. This is an upstream model issue — full evidence, a paste-ready issue, and the reproduction tool (`bun scripts/verify-rec-model.ts`, CI-guarded on ASCII via fixtures in `src/__tests__/fixtures/rec/`) are documented in `docs/upstream-rec-non-ascii.md`. Product copy must stay English-first until it is resolved.
+
 ### Server & Deployment Layers
-The Hono backend API (`src/server/hono.ts`) is mounted at `/api` and serves `/health`, `/llm.txt`, `/robots.txt`, and `/sitemap.xml`. It does not contain OCR business logic. Three entrypoints deploy this Hono router:
-- **Cloudflare Worker**: `src/worker.ts` handles API routes and serves frontend static assets using Cloudflare Workers Assets via the `ASSETS` binding, configured in `wrangler.toml` with SPA fallback.
-- **Bun Self-Host**: `src/prod-server.ts` runs a standalone production server via `Bun.serve`, serving static build assets from `dist/client` and falling back to `index.html` for frontend SPA routing.
-- **Local Dev Server**: `src/dev-server.ts` runs a Hono server on port 3001, while Vite (port 5173) handles dev hot-reloading and proxies `/api` requests to port 3001.
+The Hono backend API (`src/server/hono.ts`) is mounted at `/api` and serves `/health` (plus CORS, security headers, and request logging). It does not contain OCR business logic. `robots.txt`, `sitemap.xml`, and `llm.txt` are plain static files in `public/`, not API routes. The Hono router is mounted by three entrypoints:
+- **Cloudflare Worker**: `src/worker.ts` handles API routes and serves frontend static assets using Cloudflare Workers Assets via the `ASSETS` binding, configured in `wrangler.toml` with SPA fallback. `src/worker.ts` is the deploy artifact `wrangler deploy` bundles.
+- **Bun Self-Host**: `src/prod-server.ts` runs a standalone production server via `Bun.serve`, serving static build assets from `dist/client` and falling back to `index.html` for frontend SPA routing (with path-traversal guards).
+- **Local Dev Server**: `src/dev-server.ts` runs a Hono server on port 3001 (loopback by default), while Vite (port 5173) handles dev hot-reloading and proxies `/api` requests to port 3001 through `vite.config.ts`.
 
 ## Key Directories
-- `src/routes/`: TanStack Router file-based frontend routes (e.g. `index.tsx`, `scan.tsx`).
-- `src/server/`: Backend server configurations and routing (`hono.ts`, `worker.ts`, `dev-server.ts`, `prod-server.ts`).
+- `src/routes/`: TanStack Router file-based frontend routes (`__root.tsx`, `index.tsx`, `scan.tsx`, `404.tsx`). Unknown paths render `src/components/not-found.tsx` via the root route's `notFoundComponent`.
+- `src/server/`: Hono router only (`hono.ts`). The server entrypoints (`worker.ts`, `dev-server.ts`, `prod-server.ts`) live at the `src/` root.
 - `src/lib/ocr/`: Core OCR engine, model loader, preprocessing, postprocessing, and PDF renderer.
 - `src/components/ocr/`: Frontend OCR UI components (e.g., canvas overlay, upload forms, result lists).
-- `src/components/ui/`: UI primitives styled with shadcn/ui.
+- `src/components/ui/`: Hand-rolled UI primitives in shadcn/ui style (no shadcn or CVA dependency).
 - `src/styles/`: Tailwind CSS entrypoint (`app.css`) and global theme configurations.
-- `src/__tests__/`: Unit tests for pure OCR utility functions.
+- `src/__tests__/`: Unit tests for pure OCR logic (preprocessor, postprocessor, pipeline, scan-session) plus `tsconfig.test.json`, which type-checks them separately because the main tsconfig excludes them.
 
 ## Development Commands
 Manage and run tasks via Bun:
@@ -45,7 +47,7 @@ Manage and run tasks via Bun:
 | `bun run build` | Builds frontend assets (`dist/client`) and generates router routes |
 | `bun run start` | Runs the production server via `src/prod-server.ts` |
 | `bun run deploy` | Vite build followed by `wrangler deploy` to Cloudflare |
-| `bun run typecheck` | Runs `tsc --noEmit` |
+| `bun run typecheck` | Runs `tsc --noEmit`, then `tsc -p tsconfig.test.json --noEmit` for the test files |
 | `bun run lint` | Runs Biome code checks on `src/` |
 | `bun run lint:fix` | Automatically fixes code style violations |
 | `bun run format` | Runs Biome formatter on `src/` |
@@ -79,19 +81,19 @@ Manage and run tasks via Bun:
   ```
 
 ## Important Files
-- `src/client.tsx`: Hydration entrypoint for the SPA.
-- `src/router.tsx`: TanStack Router instance configuration.
-- `src/routes/api/$.ts`: Catch-all proxy mapping route to the Hono API server.
-- `src/server/hono.ts`: Central Hono router serving health, robots, and SEO metadata.
+- `src/client.tsx`: SPA entrypoint; creates the TanStack Router instance (`src/router.tsx` does not exist — routing setup lives here and in `src/routes/`).
+- `src/routes/__root.tsx`: Root route; owns the app shell and the `notFoundComponent` used for unmatched paths.
+- `src/server/hono.ts`: Central Hono router; serves `/health` only (robots/sitemap/llm.txt are static files).
 - `src/lib/ocr/engine.ts`: High-level OCR singleton facade.
 - `src/lib/ocr/model-loader.ts`: Local model IndexedDB caching and WASM setup.
+- `src/lib/ocr/scan-session.ts`: One scan lifecycle (model load, inference, progress, cancellation, exports).
 - `package.json`: Dependencies, dev scripts, and assets `postinstall` triggers.
 - `wrangler.toml`: Cloudflare Worker and Asset binding setup.
 - `Dockerfile` / `docker-compose.yml`: Server self-hosting templates.
-- `biome.json` / `lefthook.yml`: Lint rules and Git pre-commit hook setups.
+- `biome.json` / `lefthook.yml` / `tsconfig.test.json`: Lint rules, pre-commit hooks, and the test type-check config.
 
 ## Runtime/Tooling Preferences
-- **Runtime**: Bun (v1.3.5) is required. Node >= 20 is accepted for engine compatibility, but development, scripts, and production processes run under Bun.
+- **Runtime**: Bun (1.4.x, pinned via `packageManager`) is required. Node >= 20 is accepted for engine compatibility, but development, scripts, and production processes run under Bun.
 - **Package Manager**: Bun is the exclusive package manager. Do not use npm or yarn.
 - **Tooling Constraints**:
   - Biome v2 is used instead of ESLint/Prettier.
@@ -100,7 +102,8 @@ Manage and run tasks via Bun:
 
 ## Testing & QA
 - **Framework**: Bun test runner (`bun:test`) is used.
-- **Environment**: Node.js environment (no browser DOM emulation).
-- **Scope**: Testing is restricted to pure-logic OCR utility modules (`src/__tests__/lib/ocr/*` covering the preprocessor, postprocessor, and pipeline).
+- **Environment**: Node.js environment (no browser DOM emulation); `src/__tests__/setup.ts` stubs `DOMMatrix` for the `pdfjs-dist` import.
+- **Scope**: Testing is restricted to pure-logic modules (`src/__tests__/lib/ocr/*` covering the preprocessor, postprocessor, pipeline, and scan-session). Browser-only modules (`model-loader`, `pdf-renderer`, components) are not unit-tested.
+- **Type checking**: The main `tsconfig.json` excludes `src/__tests__/**`, so test files are checked by `tsconfig.test.json` instead — keep both green, or a type error in a test (e.g. a drifting fake) goes unnoticed.
 - **Coverage**: Coverage is validated in CI (`.github/workflows/ci.yml`) using `bun run test -- --coverage`.
 - **Verification**: UI, layout, and page routing logic are not unit-tested. Verify UI changes visually by driving the application in a browser environment.

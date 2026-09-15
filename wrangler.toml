@@ -1,4 +1,6 @@
 name = "ocr"
+# Wrangler bundles this entry directly; the @cloudflare/vite-plugin build also
+# emits a bundled Worker under dist/ocr, which this deploy path does not use.
 main = "src/worker.ts"
 compatibility_date = "2026-05-19"
 

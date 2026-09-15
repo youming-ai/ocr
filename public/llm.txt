@@ -10,9 +10,14 @@ OCR is a privacy-first on-device OCR tool powered by PaddleOCR PP-OCRv6. Extract
 
 ## Features
 - On-device OCR — source files never leave your browser
-- Chinese, English, Japanese & Latin script support
-- PP-OCRv6: accurate text recognition, runs on any device via WASM
+- Reliable English (ASCII) text, numbers and symbols
 - Image and PDF support
+
+## Known limitation
+- Non-ASCII scripts (Chinese, Japanese, accented Latin, …) are not reliably
+  recognized yet: the released PP-OCRv6/v5 unified recognition models transcribe
+  non-ASCII text as byte sequences, an upstream issue tracked at
+  https://github.com/youming-ai/ocr/blob/main/docs/upstream-rec-non-ascii.md
 
 ## Privacy
 - OCR runs entirely in-browser — no file uploads to any server

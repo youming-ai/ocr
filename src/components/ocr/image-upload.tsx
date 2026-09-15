@@ -1,5 +1,5 @@
 import { ScanText } from 'lucide-react';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useI18n } from '~/components/i18n-provider';
 import { cn } from '~/lib/utils';
 
@@ -8,14 +8,11 @@ interface ImageUploadProps {
   className?: string;
 }
 
-const ACCEPTED_TYPES = [
-  'image/png',
-  'image/jpeg',
-  'image/webp',
-  'image/bmp',
-  'image/tiff',
-  'application/pdf',
-];
+// Only formats an `<img>` can actually decode: the pipeline feeds the file to an
+// HTMLImageElement via an object URL. That rules out TIFF, which Chrome and
+// Firefox cannot decode (Safari only), so offering it here would guarantee a
+// "Failed to load image" error after a successful upload.
+const ACCEPTED_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/bmp', 'application/pdf'];
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB
 const PDF_MAX_SIZE = 200 * 1024 * 1024; // 200MB
 
@@ -63,22 +60,27 @@ export function ImageUpload({ onImageSelect, className }: ImageUploadProps) {
     [handleFile]
   );
 
-  const handlePaste = useCallback(
-    (e: React.ClipboardEvent) => {
-      const items = Array.from(e.clipboardData.items);
+  // Paste is a document-level gesture: the button only receives paste events
+  // while it happens to hold focus, so listening on the button alone made the
+  // advertised "paste from clipboard" hint unreliable.
+  useEffect(() => {
+    const onPaste = (e: ClipboardEvent) => {
+      const items = Array.from(e.clipboardData?.items ?? []);
       const imageItem = items.find((item) => item.type.startsWith('image/'));
-      if (imageItem) {
-        const file = imageItem.getAsFile();
-        if (file) handleFile(file);
-      }
-    },
-    [handleFile]
-  );
+      const file = imageItem?.getAsFile();
+      if (file) handleFile(file);
+    };
+    document.addEventListener('paste', onPaste);
+    return () => document.removeEventListener('paste', onPaste);
+  }, [handleFile]);
 
   const handleClick = () => inputRef.current?.click();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    // Reset first: without this, re-picking the same file (e.g. after a size or
+    // format error) fires no change event and the error message sticks.
+    e.target.value = '';
     if (file) handleFile(file);
   };
 
@@ -98,7 +100,6 @@ export function ImageUpload({ onImageSelect, className }: ImageUploadProps) {
         }}
         onDragLeave={() => setIsDragging(false)}
         onDrop={handleDrop}
-        onPaste={handlePaste}
         onClick={handleClick}
         aria-label={t('upload.aria')}
       >
@@ -116,7 +117,7 @@ export function ImageUpload({ onImageSelect, className }: ImageUploadProps) {
         <p className="text-sm font-medium text-foreground">{t('upload.drop')}</p>
         <p className="mt-0.5 text-sm text-muted-foreground">{t('upload.hint')}</p>
         <p className="mt-3 font-mono text-[11px] text-muted-foreground/70">
-          PNG JPG WEBP BMP TIFF · 10MB &nbsp;·&nbsp; PDF · 200MB
+          PNG JPG WEBP BMP · 10MB &nbsp;·&nbsp; PDF · 200MB
         </p>
       </button>
 

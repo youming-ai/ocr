@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { normalizeForRec, resizeImage } from '~/lib/ocr/preprocessor';
+import { normalizeForDet, normalizeForRec, resizeImage } from '~/lib/ocr/preprocessor';
 
 describe('resizeImage', () => {
   it('keeps dimensions within maxDimension but snaps to multiples of 32', () => {
@@ -28,6 +28,27 @@ describe('resizeImage', () => {
     const result = resizeImage(1000, 750, 960);
     expect(result.width % 32).toBe(0);
     expect(result.height % 32).toBe(0);
+  });
+});
+
+describe('normalizeForDet', () => {
+  it('applies the model ImageNet mean/std per BGR channel', () => {
+    // One pixel, mid grey in every channel: B=G=R=0.5.
+    const input = new Float32Array([0.5, 0.5, 0.5]);
+    const out = normalizeForDet(input);
+    // (0.5 - 0.485) / 0.229, (0.5 - 0.456) / 0.224, (0.5 - 0.406) / 0.225
+    expect(out[0]).toBeCloseTo(0.065502, 5);
+    expect(out[1]).toBeCloseTo(0.196429, 5);
+    expect(out[2]).toBeCloseTo(0.417778, 5);
+  });
+
+  it('preserves BGR channel order and does not mutate the input', () => {
+    const input = new Float32Array([1, 0, 0]); // B only
+    const out = normalizeForDet(input);
+    expect(out[0]).toBeCloseTo(2.248908, 5);
+    expect(out[1]).toBeCloseTo(-2.035714, 5);
+    expect(out[2]).toBeCloseTo(-1.804444, 5);
+    expect(Array.from(input)).toEqual([1, 0, 0]);
   });
 });
 
