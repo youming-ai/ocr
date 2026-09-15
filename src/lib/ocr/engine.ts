@@ -24,30 +24,43 @@ export class OcrEngine {
     this.config = {
       modelBaseUrl: config?.modelBaseUrl ?? '/models/pp-ocrv6-small',
       maxDimension: config?.maxDimension ?? 960,
-      detThreshold: config?.detThreshold ?? 0.3,
-      detUnclipRatio: config?.detUnclipRatio ?? 1.6,
+      detThreshold: config?.detThreshold ?? 0.2,
+      detBoxThreshold: config?.detBoxThreshold ?? 0.45,
+      detUnclipRatio: config?.detUnclipRatio ?? 1.4,
       detMinSideLength: config?.detMinSideLength ?? 3,
       detMinArea: config?.detMinArea ?? 10,
     };
   }
 
-  /** Whether models have been loaded */
+  /**
+   * Whether models *and* the character dictionary are loaded, i.e. whether
+   * `recognize()` can run. Reporting model-only success here would make
+   * `runScanSession` skip a needed retry and surface a misleading
+   * "engine not loaded" error instead.
+   */
   get isReady(): boolean {
-    return this.models !== null;
+    return this.models !== null && this.dict !== null;
   }
 
   /**
-   * Load ONNX models. Subsequent calls are no-ops if already loaded.
+   * Load ONNX models and the character dictionary. Subsequent calls are no-ops
+   * once both are present, and a partial failure stays retryable: the model set
+   * is only published after the dictionary resolves, so a failed dictionary
+   * fetch does not wedge the engine for the lifetime of the page.
    * Safe to call multiple times concurrently.
    */
   async load(onModelLoaded?: (name: string, fromCache: boolean) => void): Promise<void> {
-    if (this.models) return;
+    if (this.isReady) return;
     if (this.loading) return this.loading;
 
-    this.loading = loadModels(this.config.modelBaseUrl, onModelLoaded).then(async (models) => {
+    this.loading = (async () => {
+      // Reuse whichever half already succeeded, so a dictionary-only retry does
+      // not re-download the models.
+      const models = this.models ?? (await loadModels(this.config.modelBaseUrl, onModelLoaded));
+      const dict = this.dict ?? (await loadFullDictionary(this.config.modelBaseUrl));
       this.models = models;
-      this.dict = await loadFullDictionary(this.config.modelBaseUrl);
-    });
+      this.dict = dict;
+    })();
 
     try {
       await this.loading;
@@ -72,6 +85,7 @@ export class OcrEngine {
     const pipeline = new OcrPipeline(this.models, onProgress, {
       maxDimension: this.config.maxDimension,
       detThreshold: this.config.detThreshold,
+      detBoxThreshold: this.config.detBoxThreshold,
       detUnclipRatio: this.config.detUnclipRatio,
       detMinSideLength: this.config.detMinSideLength,
       detMinArea: this.config.detMinArea,

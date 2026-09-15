@@ -21,6 +21,7 @@ export function decodeCtc(data: Float32Array, numClasses: number, dict: string[]
 
   let text = '';
   let totalConf = 0;
+  let decoded = 0;
   let prevIdx = -1;
 
   for (let t = 0; t < seqLen; t++) {
@@ -39,14 +40,21 @@ export function decodeCtc(data: Float32Array, numClasses: number, dict: string[]
     // Skip blanks (index 0) and repeated
     if (maxIdx !== 0 && maxIdx !== prevIdx) {
       const ch = dict[maxIdx] ?? '';
-      text += ch;
-      totalConf += maxVal;
+      // Average over emitted characters, not over UTF-16 code units: astral
+      // characters (e.g. rare CJK extensions) are two units long and would
+      // otherwise skew the confidence, and an empty dict entry contributes no
+      // character at all.
+      if (ch !== '') {
+        text += ch;
+        totalConf += maxVal;
+        decoded++;
+      }
     }
 
     prevIdx = maxIdx;
   }
 
-  const confidence = text.length > 0 ? totalConf / text.length : 0;
+  const confidence = decoded > 0 ? totalConf / decoded : 0;
   return { text, confidence: Math.min(1, Math.max(0, confidence)) };
 }
 
@@ -117,12 +125,20 @@ const NEIGHBOR_DIRECTIONS = [
 /**
  * Extract text bounding boxes from a DBNet probability map.
  *
- * Algorithm:
+ * Mirrors PaddleOCR's `DBPostProcess` for axis-aligned boxes:
  * 1. Threshold the probability map
  * 2. Find connected components
- * 3. Extract minimum bounding rectangles
- * 4. Expand with unclip ratio
- * 5. Filter by side length and area
+ * 3. Take each component's bounding rect
+ * 4. Score the rect by its mean probability (PaddleOCR's `box_score_fast`) and
+ *    drop anything below `boxThreshold` (official default 0.45)
+ * 5. Expand the survivors with the unclip ratio
+ * 6. Filter by side length and area, then suppress overlaps with NMS
+ *
+ * Known deviation: the unclip step expands each axis by a fixed fraction of
+ * that axis ((ratio - 1) / 2) instead of pyclipper's area/perimeter-based
+ * polygon offset, and boxes stay axis-aligned. That is fine for horizontal text
+ * and keeps the pipeline dependency-free, but angled text is cropped as one
+ * block and recognizes poorly.
  */
 export function extractBoxes(
   probMap: Float32Array,
@@ -130,19 +146,28 @@ export function extractBoxes(
   height: number,
   opts: {
     threshold: number;
+    /** Mean-probability floor for a box (PaddleOCR `box_thresh`). */
+    boxThreshold: number;
     unclipRatio: number;
     minSideLength: number;
     minArea: number;
   }
 ): DetectedBox[] {
+  const expected = width * height;
+  if (probMap.length < expected) {
+    throw new Error(
+      `Detection probability map has ${probMap.length} values but ${width}x${height} (${expected}) was requested`
+    );
+  }
+
   // 1. Threshold → binary mask
-  const mask = new Uint8Array(width * height);
-  for (let i = 0; i < probMap.length; i++) {
+  const mask = new Uint8Array(expected);
+  for (let i = 0; i < expected; i++) {
     mask[i] = (probMap[i] ?? 0) > opts.threshold ? 1 : 0;
   }
 
   // 2. Find connected components (simple flood fill)
-  const visited = new Uint8Array(width * height);
+  const visited = new Uint8Array(expected);
   const components: { box: number[][]; score: number }[] = [];
 
   for (let y = 0; y < height; y++) {
@@ -192,6 +217,10 @@ export function extractBoxes(
       const sideX = maxX - minX;
       const sideY = maxY - minY;
 
+      // 4. Drop weak boxes before unclipping, as PaddleOCR does.
+      const score = boxMeanScore(probMap, width, minX, minY, maxX, maxY);
+      if (score < opts.boxThreshold) continue;
+
       // 5. Filter by side length and area
       if (sideX < opts.minSideLength || sideY < opts.minSideLength) continue;
       if (sideX * sideY < opts.minArea) continue;
@@ -204,15 +233,6 @@ export function extractBoxes(
       const y0 = Math.max(0, Math.round(minY - expandY));
       const x1 = Math.min(width - 1, Math.round(maxX + expandX));
       const y1 = Math.min(height - 1, Math.round(maxY + expandY));
-
-      let scoreSum = 0;
-      const pixelCount = pixels.length / 2;
-      for (let i = 0; i < pixels.length; i += 2) {
-        const px = pixels[i] ?? 0;
-        const py = pixels[i + 1] ?? 0;
-        scoreSum += probMap[py * width + px] ?? 0;
-      }
-      const score = scoreSum / pixelCount;
 
       components.push({
         box: [
@@ -234,6 +254,27 @@ export function extractBoxes(
   return kept.map((i) => ({
     points: components[i]?.box ?? [],
   }));
+}
+
+/** Mean probability inside an inclusive axis-aligned rect (PaddleOCR `box_score_fast`). */
+function boxMeanScore(
+  probMap: Float32Array,
+  mapWidth: number,
+  minX: number,
+  minY: number,
+  maxX: number,
+  maxY: number
+): number {
+  let sum = 0;
+  let count = 0;
+  for (let y = minY; y <= maxY; y++) {
+    const rowOffset = y * mapWidth;
+    for (let x = minX; x <= maxX; x++) {
+      sum += probMap[rowOffset + x] ?? 0;
+      count++;
+    }
+  }
+  return count > 0 ? sum / count : 0;
 }
 
 /**

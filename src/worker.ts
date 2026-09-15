@@ -10,8 +10,9 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
 
-    // API routes → Hono app
-    if (url.pathname.startsWith('/api')) {
+    // API routes → Hono app. Match the path segment, not the prefix, so a path
+    // like /api-docs is not mistaken for the API.
+    if (url.pathname === '/api' || url.pathname.startsWith('/api/')) {
       return app.fetch(request, env);
     }
 

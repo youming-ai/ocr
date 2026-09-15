@@ -7,7 +7,7 @@ export type ScanStatus =
   | { stage: 'loading'; progress: OcrProgress }
   | { stage: 'processing'; progress: OcrProgress }
   | { stage: 'done' }
-  | { stage: 'error'; message: string };
+  | { stage: 'error'; errorKey: TranslationKey; detail: string };
 
 export interface ScanSessionState {
   status: ScanStatus;
@@ -29,6 +29,27 @@ export interface ScanSession {
   exportAllPagesJson(): string;
   /** Fires exactly once when the session is cancelled, useful for tests. */
   onCancelled(callback: () => void): () => void;
+}
+
+/**
+ * Map a thrown error to a user-facing translation key plus the raw detail.
+ * The key is resolved by the route at render time, so the message follows the
+ * active language rather than the language that happened to be active at
+ * failure time (and internal strings stay out of the headline).
+ */
+export function describeScanError(err: unknown): {
+  errorKey: TranslationKey;
+  detail: string;
+} {
+  const detail = err instanceof Error ? err.message : String(err);
+  const lower = detail.toLowerCase();
+  if (lower.includes('dictionary')) return { errorKey: 'error.dictionary', detail };
+  if (lower.includes('model')) return { errorKey: 'error.modelDownload', detail };
+  if (lower.includes('load image') || lower.includes('canvas')) {
+    return { errorKey: 'error.imageDecode', detail };
+  }
+  if (lower.includes('pdf')) return { errorKey: 'error.pdf', detail };
+  return { errorKey: 'error.ocrFailed', detail };
 }
 
 export function serializeAllPagesDoc(state: ScanSessionState): string {
@@ -55,7 +76,6 @@ interface ScanDeps {
   engine: OcrEngine;
   onUpdate(state: ScanSessionState): void;
   navigateHome(): void;
-  t: (key: TranslationKey, params?: Record<string, string | number>) => string;
 }
 
 /**
@@ -64,7 +84,7 @@ interface ScanDeps {
  * interface and no longer needs to orchestrate the pipeline inline.
  */
 export async function runScanSession(deps: ScanDeps): Promise<ScanSession> {
-  const { file, engine, onUpdate, navigateHome, t } = deps;
+  const { file, engine, onUpdate, navigateHome } = deps;
 
   let objectUrls: string[] = [];
   const controller = new AbortController();
@@ -179,10 +199,19 @@ export async function runScanSession(deps: ScanDeps): Promise<ScanSession> {
 
   function handleError(err: unknown) {
     if (cancelled) return;
-    const message = err instanceof Error ? err.message : t('error.ocrFailed');
-    console.error(`[ERROR] Scan failed: ${message}`);
-    setStatus({ stage: 'error', message });
-    revokeAll();
+    const { errorKey, detail } = describeScanError(err);
+    console.error(`[ERROR] Scan failed: ${detail}`);
+
+    // Keep the pages that already finished: their object URLs are still live
+    // and the user may still want to read, copy, or download them. Revoking here
+    // (while `state.pages` kept referencing the URLs) rendered broken images for
+    // pages that had succeeded, so only `cancel()` releases them now.
+    const lastPage = state.pages[state.pages.length - 1];
+    if (lastPage) {
+      state.activePage = lastPage.pageNumber;
+      state.imageSrc = lastPage.imageSrc;
+    }
+    setStatus({ stage: 'error', errorKey, detail });
   }
 
   function throwIfCancelled() {

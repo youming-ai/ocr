@@ -1,21 +1,33 @@
 import * as ort from 'onnxruntime-web';
 import type { LoadedModels } from './model-loader';
 import { decodeCtc, extractBoxes, sortBoxes } from './postprocessor';
-import { cropRegion, imageToPixels, loadImage, normalizeForRec, resizeImage } from './preprocessor';
+import {
+  cropRegion,
+  imageToPixels,
+  loadImage,
+  normalizeForDet,
+  normalizeForRec,
+  resizeImage,
+} from './preprocessor';
 import type { OcrProgress, OcrResult, TextBox } from './types';
 
 export interface PipelineConfig {
   maxDimension: number;
   detThreshold: number;
+  /** Mean-probability floor for a detected box (PaddleOCR `box_thresh`). */
+  detBoxThreshold: number;
   detUnclipRatio: number;
   detMinSideLength: number;
   detMinArea: number;
 }
 
+// Defaults follow PP-OCRv6_small_det's published postprocess config
+// (thresh 0.2, box_thresh 0.45, unclip_ratio 1.4).
 const DEFAULT_CONFIG: PipelineConfig = {
   maxDimension: 960,
-  detThreshold: 0.3,
-  detUnclipRatio: 1.6,
+  detThreshold: 0.2,
+  detBoxThreshold: 0.45,
+  detUnclipRatio: 1.4,
   detMinSideLength: 3,
   detMinArea: 10,
 };
@@ -80,7 +92,10 @@ export class OcrPipeline {
 
     // Stage 1: Detection
     this.report('detecting', 0.2, 'Detecting text regions...');
-    const detTensor = new ort.Tensor('float32', pixels, [1, 3, height, width]);
+    // `pixels` stays raw (BGR, [0, 1]) because the recognizer re-crops from this
+    // same buffer and needs the un-normalized values; only the detector input
+    // gets the ImageNet normalization the det model was exported with.
+    const detTensor = new ort.Tensor('float32', normalizeForDet(pixels), [1, 3, height, width]);
     const detResults = await this.models.det.run({ x: detTensor });
     const detKey = Object.keys(detResults)[0];
     if (!detKey) throw new Error('Detection model returned no output');
@@ -89,8 +104,18 @@ export class OcrPipeline {
     const probMapH = detOutput.dims[2] as number;
     const probMapW = detOutput.dims[3] as number;
 
+    // Boxes come back in probability-map space, but `recognizeBox` crops them out
+    // of the input buffer, so a mismatch would silently produce garbage crops.
+    if (probMapW !== width || probMapH !== height) {
+      throw new Error(
+        `Detection output size ${probMapW}x${probMapH} does not match the ${width}x${height} input. ` +
+          'The detector must preserve spatial dimensions.'
+      );
+    }
+
     const detectedBoxes = extractBoxes(probMap, probMapW, probMapH, {
       threshold: this.config.detThreshold,
+      boxThreshold: this.config.detBoxThreshold,
       unclipRatio: this.config.detUnclipRatio,
       minSideLength: this.config.detMinSideLength,
       minArea: this.config.detMinArea,
@@ -154,8 +179,8 @@ export class OcrPipeline {
       width: recW,
       height: recH,
     } = normalizeForRec(cropped.data, cropped.width, cropped.height, 48);
-
-    if (recW === 0) return { text: '', confidence: 0 };
+    // `normalizeForRec` clamps the resized width to at least 1, so recW is always
+    // a valid tensor dimension here.
 
     // Run recognition model
     const recTensor = new ort.Tensor('float32', recInput, [1, 3, recH, recW]);
@@ -180,5 +205,7 @@ export class OcrPipeline {
   }
 }
 
-// ponytail: recognition runs per-box. Batch inference is tracked in
-// https://github.com/youming-ai/ocr/issues (if filed).
+// Recognition runs one crop per `rec.run()` call (see the loop in
+// `processPixels`). Batching several crops into a single call is the main
+// remaining speed-up for text-dense pages; the rec model's dynamic shapes
+// already allow a batched `x` (e.g. [8, 3, 48, W]).

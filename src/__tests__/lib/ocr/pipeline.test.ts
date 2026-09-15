@@ -5,7 +5,7 @@ import { OcrPipeline } from '~/lib/ocr/pipeline';
 import type { OcrProgress } from '~/lib/ocr/types';
 
 function fakeTensor(data: Float32Array, dims: number[]): ort.Tensor {
-  return { data, dims } as ort.Tensor;
+  return { data, dims } as unknown as ort.Tensor;
 }
 
 function createFakeRecSession(output: Float32Array, seqLen: number, numClasses: number) {
@@ -56,17 +56,20 @@ describe('OcrPipeline', () => {
     // Dict has 3 entries; model has 4 classes -> mismatch.
     pipeline.setDict(['', 'A', 'B']);
 
-    const err = await pipeline
-      .recognizeBox(new Float32Array(3 * 64 * 64), 64, 64, [
+    let caught: unknown;
+    try {
+      await pipeline.recognizeBox(new Float32Array(3 * 64 * 64), 64, 64, [
         [10, 10],
         [20, 10],
         [20, 20],
         [10, 20],
-      ])
-      .catch((e: Error) => e);
+      ]);
+    } catch (err) {
+      caught = err;
+    }
 
-    expect(err).toBeInstanceOf(Error);
-    expect(err.message).toContain('class count');
+    expect(caught).toBeInstanceOf(Error);
+    expect((caught as Error).message).toContain('class count');
   });
 
   it('decodes recognized text from fake rec output', async () => {

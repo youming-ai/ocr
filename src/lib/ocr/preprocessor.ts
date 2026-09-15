@@ -48,8 +48,18 @@ export function loadImage(src: string): Promise<HTMLImageElement> {
 }
 
 /**
- * Draw image to canvas and extract pixel data as CHW Float32Array.
- * Returns [pixelData, width, height].
+ * Draw image to canvas and extract pixel data as a raw CHW Float32Array in
+ * **BGR** channel order, scaled to [0, 1].
+ *
+ * This is deliberately *model-agnostic*: detection and recognition need
+ * different normalizations of the same pixels, so this function must not bake
+ * in either one. Apply `normalizeForDet()` before running the detector and
+ * `normalizeForRec()` before running the recognizer.
+ *
+ * Channel order is BGR because both PP-OCRv6 ONNX models were exported from a
+ * PaddleOCR `PreProcess` that decodes with `img_mode: BGR` and never converts
+ * to RGB (see the model's `inference.yml`), so the network expects swapped
+ * R/B channels relative to the canvas's RGBA data.
  */
 export function imageToPixels(
   img: HTMLImageElement,
@@ -66,23 +76,51 @@ export function imageToPixels(
   const imageData = ctx.getImageData(0, 0, targetWidth, targetHeight);
   const rgba = imageData.data;
 
-  // Convert HWC (RGBA) to CHW (RGB), normalize to [0, 1]
+  // Convert HWC (RGBA) to CHW (BGR), scale to [0, 1]
   const channels = 3;
   const pixels = targetWidth * targetHeight;
   const data = new Float32Array(channels * pixels);
 
   for (let i = 0; i < pixels; i++) {
-    data[i] = (rgba[i * 4] ?? 0) / 255; // R
+    data[i] = (rgba[i * 4 + 2] ?? 0) / 255; // B
     data[pixels + i] = (rgba[i * 4 + 1] ?? 0) / 255; // G
-    data[2 * pixels + i] = (rgba[i * 4 + 2] ?? 0) / 255; // B
+    data[2 * pixels + i] = (rgba[i * 4] ?? 0) / 255; // R
   }
 
   return { data, width: targetWidth, height: targetHeight };
 }
 
+// Detector normalization, from PP-OCRv6_small_det's `inference.yml`
+// (`NormalizeImage: {mean: [...], std: [...], scale: 1/255, order: hwc}`).
+// Values are listed in BGR order to match the CHW buffer from `imageToPixels`.
+const DET_MEAN = [0.485, 0.456, 0.406];
+const DET_STD = [0.229, 0.224, 0.225];
+
+/**
+ * Normalize a raw [0, 1] BGR CHW buffer for the DBNet detector: (x - mean) / std
+ * per channel. Skipping this shifts the probability map and degrades detection.
+ */
+export function normalizeForDet(data: Float32Array): Float32Array {
+  const pixels = Math.floor(data.length / 3);
+  const result = new Float32Array(pixels * 3);
+  for (let c = 0; c < 3; c++) {
+    const mean = DET_MEAN[c] ?? 0;
+    const std = DET_STD[c] ?? 1;
+    const offset = c * pixels;
+    for (let i = 0; i < pixels; i++) {
+      result[offset + i] = ((data[offset + i] ?? 0) - mean) / std;
+    }
+  }
+  return result;
+}
+
 /**
  * Normalize pixel data for recognition model input.
- * PP-OCRv6 rec model expects (x - 0.5) / 0.5.
+ *
+ * Consumes the raw [0, 1] BGR buffer from `imageToPixels` (or a crop of it) and
+ * applies PP-OCR's `RecResizeImg` scaling in place of mean 0.5 / std 0.5, i.e.
+ * (x - 0.5) / 0.5. Channel order is preserved (BGR), matching the rec model's
+ * `img_mode: BGR` preprocessing.
  */
 export function normalizeForRec(
   data: Float32Array,
@@ -135,8 +173,9 @@ export function normalizeForRec(
 }
 
 /**
- * Extract a sub-region from CHW pixel data.
- * Used to crop detected text regions for recognition.
+ * Extract a sub-region from a raw CHW BGR buffer (see `imageToPixels`).
+ * Used to crop detected text regions before recognition; the crop keeps the
+ * un-normalized [0, 1] values so `normalizeForRec` can own the rec scaling.
  */
 export function cropRegion(
   data: Float32Array,

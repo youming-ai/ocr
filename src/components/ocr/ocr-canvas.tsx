@@ -45,49 +45,72 @@ export function OcrCanvas({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [showOverlay, setShowOverlay] = useState(true);
   const [zoom, setZoom] = useState(1);
-  const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
+  // Holding the decoded image in state (instead of decoding inside the redraw
+  // effect) means a hover only repaints: decoding the source once per imageSrc
+  // keeps highlighting responsive on large pages.
+  const [decoded, setDecoded] = useState<{ image: HTMLImageElement } | null>(null);
+  const [decodeFailed, setDecodeFailed] = useState(false);
 
   useEffect(() => {
+    let active = true;
+    setDecodeFailed(false);
     const img = new Image();
     img.onload = () => {
-      setImageSize({ width: img.width, height: img.height });
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-
-      const parentW = canvas.parentElement?.clientWidth ?? 800;
-      const baseScale = Math.min(1, parentW / img.width);
-      const scale = baseScale * zoom;
-      canvas.width = img.width * scale;
-      canvas.height = img.height * scale;
-
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-      if (showOverlay && boxes.length > 0) {
-        for (let i = 0; i < boxes.length; i++) {
-          const box = boxes[i];
-          if (!box) continue;
-          const isHighlighted = i === highlightedIndex;
-          ctx.strokeStyle = STROKE;
-          ctx.lineWidth = isHighlighted ? 3 : 2;
-          ctx.globalAlpha = isHighlighted ? 1 : 0.7;
-
-          ctx.beginPath();
-          const points = box.points.map((p) => [(p[0] ?? 0) * scale, (p[1] ?? 0) * scale]);
-          ctx.moveTo(points[0]?.[0] ?? 0, points[0]?.[1] ?? 0);
-          for (let j = 1; j < points.length; j++) {
-            ctx.lineTo(points[j]?.[0] ?? 0, points[j]?.[1] ?? 0);
-          }
-          ctx.closePath();
-          ctx.stroke();
-        }
-        ctx.globalAlpha = 1;
-      }
+      if (active) setDecoded({ image: img });
+    };
+    img.onerror = () => {
+      if (!active) return;
+      setDecoded(null);
+      setDecodeFailed(true);
     };
     img.src = imageSrc;
-  }, [imageSrc, boxes, highlightedIndex, showOverlay, zoom]);
+    return () => {
+      active = false;
+    };
+  }, [imageSrc]);
+
+  const imageSize = decoded
+    ? { width: decoded.image.width, height: decoded.image.height }
+    : { width: 0, height: 0 };
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !decoded) return;
+    const img = decoded.image;
+
+    const parentW = canvas.parentElement?.clientWidth ?? 800;
+    const baseScale = Math.min(1, parentW / img.width);
+    const scale = baseScale * zoom;
+    canvas.width = Math.round(img.width * scale);
+    canvas.height = Math.round(img.height * scale);
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+    if (showOverlay && boxes.length > 0) {
+      for (let i = 0; i < boxes.length; i++) {
+        const box = boxes[i];
+        if (!box) continue;
+        const isHighlighted = i === highlightedIndex;
+        ctx.strokeStyle = STROKE;
+        ctx.lineWidth = isHighlighted ? 3 : 2;
+        ctx.globalAlpha = isHighlighted ? 1 : 0.7;
+
+        ctx.beginPath();
+        const points = box.points.map((p) => [(p[0] ?? 0) * scale, (p[1] ?? 0) * scale]);
+        ctx.moveTo(points[0]?.[0] ?? 0, points[0]?.[1] ?? 0);
+        for (let j = 1; j < points.length; j++) {
+          ctx.lineTo(points[j]?.[0] ?? 0, points[j]?.[1] ?? 0);
+        }
+        ctx.closePath();
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+    }
+  }, [decoded, boxes, highlightedIndex, showOverlay, zoom]);
 
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!canvasRef.current || boxes.length === 0) return;
@@ -143,7 +166,17 @@ export function OcrCanvas({
 
       {/* Body — scrollable viewport */}
       <div className="flex-1 overflow-auto bg-background p-2">
-        <canvas ref={canvasRef} onClick={handleCanvasClick} className="cursor-crosshair rounded" />
+        {decodeFailed ? (
+          <p className="p-4 font-mono text-[11px] tracking-wider text-muted-foreground">
+            {t('source.imageUnavailable')}
+          </p>
+        ) : (
+          <canvas
+            ref={canvasRef}
+            onClick={handleCanvasClick}
+            className="cursor-crosshair rounded"
+          />
+        )}
       </div>
 
       {/* Footer — pager + zoom controls */}

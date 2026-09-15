@@ -8,7 +8,9 @@ const MODEL_FILES: Record<ModelName, string> = {
 };
 
 const DB_NAME = 'ocr-models';
-// ponytail: legacy IndexedDB name from pre-rename (parsify → ocr). Delete after 2026-10-01 if no migration hits in prod logs.
+// Database name used before the parsify → ocr rename; migrated on first read so
+// returning users do not re-download ~31 MB of models. Removable after
+// 2026-10-01, once no legacy database shows up in the migration logs.
 const LEGACY_DB_NAME = 'parsify-ocr-models';
 const DB_VERSION = 3;
 const STORE_NAME = 'models';
@@ -112,10 +114,13 @@ async function setCachedModel(name: ModelName, data: ArrayBuffer): Promise<void>
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, 'readwrite');
-    const store = tx.objectStore(STORE_NAME);
-    const request = store.put(data, name);
-    request.onsuccess = () => resolve();
-    request.onerror = () => reject(request.error);
+    tx.objectStore(STORE_NAME).put(data, name);
+    // Settle on transaction completion, not on the request's success: a quota
+    // failure aborts the transaction *after* the put "succeeds", and reporting a
+    // cache hit for a write that never landed would hide the re-download.
+    tx.oncomplete = () => resolve();
+    tx.onabort = () => reject(tx.error ?? new Error('IndexedDB write aborted'));
+    tx.onerror = () => reject(tx.error ?? new Error('IndexedDB write failed'));
   });
 }
 
@@ -184,7 +189,14 @@ export async function loadModels(
   baseUrl = '/models/pp-ocrv6-small',
   onModelLoaded?: (name: ModelName, fromCache: boolean) => void
 ): Promise<LoadedModels> {
-  ort.env.wasm.numThreads = 1;
+  // Threaded WASM needs SharedArrayBuffer, which browsers only expose to
+  // cross-origin-isolated documents (`crossOriginIsolated`). Where the COOP/COEP
+  // headers are absent that flag is false and forcing threads would break
+  // initialization, so fall back to a single thread; see the README for the
+  // header recipe that unlocks the faster path.
+  ort.env.wasm.numThreads = globalThis.crossOriginIsolated
+    ? Math.max(1, Math.min(4, navigator.hardwareConcurrency || 1))
+    : 1;
   // Vite 7+ refuses to import JS files from /public during dev, so load the
   // ONNX Runtime wasm loader module directly from node_modules in development.
   // In production the non-JSEP WASM files are copied to /ort by postinstall.

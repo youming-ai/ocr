@@ -36,9 +36,11 @@ export interface OcrEngineConfig {
   modelBaseUrl?: string;
   /** Maximum image dimension in pixels (default: 960) */
   maxDimension?: number;
-  /** Detection threshold (default: 0.3) */
+  /** Detection threshold (default: 0.2) */
   detThreshold?: number;
-  /** Detection box unclip ratio (default: 1.6) */
+  /** Minimum mean probability for a detected box (default: 0.45) */
+  detBoxThreshold?: number;
+  /** Detection box unclip ratio (default: 1.4) */
   detUnclipRatio?: number;
   /** Minimum box side length to keep (default: 3) */
   detMinSideLength?: number;

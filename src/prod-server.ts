@@ -63,7 +63,8 @@ async function staticResponse(pathname: string): Promise<Response> {
 Bun.serve({
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
-    if (url.pathname.startsWith('/api')) {
+    // Segment match, so /api-docs is not swallowed by the API branch.
+    if (url.pathname === '/api' || url.pathname.startsWith('/api/')) {
       return app.fetch(request, env);
     }
 
