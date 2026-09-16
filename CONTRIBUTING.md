@@ -70,6 +70,10 @@ Please run `bun run lint` and `bun run format` before submitting a PR.
 6. Commit your changes with a descriptive message
 7. Push to your fork and submit a Pull Request
 
+Changes touching OCR preprocessing/postprocessing, the model files, or the dictionary must keep the
+committed recognition fixtures green — run `bun scripts/verify-rec-model.ts`. ASCII fixtures are
+CI-enforced; open non-ASCII numbers are tracked upstream (see `docs/upstream-rec-non-ascii.md`).
+
 ## Pull Request Guidelines
 
 - Keep PRs focused on a single change
