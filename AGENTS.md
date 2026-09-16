@@ -19,13 +19,15 @@ The core OCR flow runs entirely in the browser, orchestrated by `OcrEngine` (`sr
 7. **Postprocessing**: `src/lib/ocr/postprocessor.ts` thresholds the DBNet probability map, drops boxes whose mean score is below `box_threshold` (0.45), applies the unclip ratio, then Non-Maximum Suppression, sorts coordinate regions, and decodes recognition scores into character strings using CTC greedy decoding. Defaults mirror the detector's published postprocess config (`thresh 0.2`, `box_thresh 0.45`, `unclip_ratio 1.4`).
 8. **Character Translation**: `OcrEngine` translates class indices using the embedded or external character dictionary (`ppocrv6_dict.txt`). The recognition model's class size must strictly match `dict length + 2` (prepended CTC blank index 0 and a trailing space; currently 18710 classes for 18708 dictionary entries).
 
-**Known limitation (do not "fix" locally)**: the shipped rec checkpoint emits non-ASCII characters as CP1252-rendered UTF-8 bytes (`本` → `æœ¬`), and missing dictionary entries make the text unrecoverable. ASCII is unaffected; product copy stays English-first. Details, reproducer (`bun scripts/verify-rec-model.ts`, CI-guarded via `src/__tests__/fixtures/rec/`) and upstream issue draft: `docs/upstream-rec-non-ascii.md`.
+**Known limitation (do not "fix" locally)**: the shipped rec checkpoint emits non-ASCII characters as CP1252-rendered UTF-8 bytes (`本` → `æœ¬`), and missing dictionary entries make the text unrecoverable. ASCII is unaffected; product copy stays English-first. Details, reproducer (`bun scripts/verify-rec-model.ts`, CI-guarded via `src/__tests__/fixtures/rec/`) and the filed upstream issue ([#18364](https://github.com/PaddlePaddle/PaddleOCR/issues/18364)): `docs/upstream-rec-non-ascii.md`.
 
 ### Server & Deployment Layers
 The Hono backend API (`src/server/hono.ts`) is mounted at `/api` and serves `/health` (plus CORS, security headers, and request logging). It does not contain OCR business logic. `robots.txt`, `sitemap.xml`, and `llm.txt` are plain static files in `public/`, not API routes. The Hono router is mounted by three entrypoints:
 - **Cloudflare Worker**: `src/worker.ts` handles API routes and serves frontend static assets using Cloudflare Workers Assets via the `ASSETS` binding, configured in `wrangler.toml` with SPA fallback. `src/worker.ts` is the deploy artifact `wrangler deploy` bundles.
 - **Bun Self-Host**: `src/prod-server.ts` runs a standalone production server via `Bun.serve`, serving static build assets from `dist/client` and falling back to `index.html` for frontend SPA routing (with path-traversal guards).
 - **Local Dev Server**: `src/dev-server.ts` runs a Hono server on port 3001 (loopback by default), while Vite (port 5173) handles dev hot-reloading and proxies `/api` requests to port 3001 through `vite.config.ts`.
+
+**Merging to `main` deploys to production**: a Cloudflare Workers Build (`Workers Builds: ocr` in PR checks) runs on every push to `main`, so treat `main` as live. `bun run deploy` is only for out-of-band releases.
 
 ## Key Directories
 - `src/routes/`: TanStack Router file-based frontend routes (`__root.tsx`, `index.tsx`, `scan.tsx`, `404.tsx`). Unknown paths render `src/components/not-found.tsx` via the root route's `notFoundComponent`.
