@@ -1,6 +1,6 @@
 # Upstream issue: PP-OCRv6/v5 rec models emit non-ASCII as UTF-8 bytes
 
-Status: **open, upstream** · Affects `public/models/pp-ocrv6-small/rec.onnx` · Verified 2026-09-15
+Status: **filed upstream** — [PaddlePaddle/PaddleOCR#18364](https://github.com/PaddlePaddle/PaddleOCR/issues/18364) · Affects `public/models/pp-ocrv6-small/rec.onnx` · Verified 2026-09-15
 
 ## Summary
 
@@ -66,7 +66,9 @@ bun scripts/verify-rec-model.ts --guard    # CI: ASCII must decode exactly
 Fixtures (rendered text lines, BGRA, ink-cropped) and ground truth live in
 `src/__tests__/fixtures/rec/`.
 
-## Upstream issue (paste-ready)
+## Upstream issue (filed as [#18364](https://github.com/PaddlePaddle/PaddleOCR/issues/18364))
+
+Submitted 2026-09-16; the text below is what was filed (Chinese summary plus the details).
 
 > **Title**: PP-OCRv5/v6 unified rec ONNX models output non-ASCII text as CP1252-rendered UTF-8
 > bytes (`PP-OCRv6_small_rec_onnx`)
@@ -99,4 +101,4 @@ Fixtures (rendered text lines, BGRA, ink-cropped) and ground truth live in
 ## Repository status
 
 - Product copy (UI spec text, `public/llm.txt`, models README) is English-first with a pointer here.
-- CI guards ASCII recognition via fixtures; non-ASCII fixtures are report-only until this closes.
+- CI guards ASCII recognition via fixtures; non-ASCII fixtures are report-only until [#18364](https://github.com/PaddlePaddle/PaddleOCR/issues/18364) closes.

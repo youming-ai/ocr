@@ -19,10 +19,11 @@ unaffected. Verified identical on PP-OCRv5 mobile, on RapidAI's re-export, and u
 onnxruntime and onnxruntime-web; the ONNX head weight is byte-identical to the official
 `inference.pdiparams`.
 
-Evidence, a paste-ready upstream issue, and the reproducer
-(`bun scripts/verify-rec-model.ts`) are in
+Evidence, the filed upstream issue
+([PaddlePaddle/PaddleOCR#18364](https://github.com/PaddlePaddle/PaddleOCR/issues/18364)) and the
+reproducer (`bun scripts/verify-rec-model.ts`) are documented in
 [docs/upstream-rec-non-ascii.md](https://github.com/youming-ai/ocr/blob/main/docs/upstream-rec-non-ascii.md).
-Treat the app as **English/ASCII-first** until upstream resolves it.
+Treat the app as **English/ASCII-first** until that closes.
 
 Nominal dictionary coverage (pending the fix): Simplified/Traditional Chinese, English, Japanese
 (hiragana + katakana), 46 Latin-script languages, Greek — 15565 CJK ideographs. Not covered
