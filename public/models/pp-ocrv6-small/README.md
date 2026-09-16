@@ -2,39 +2,31 @@
 
 On-device OCR models loaded by `src/lib/ocr/model-loader.ts` via ONNX Runtime Web.
 
-- `det.onnx` — Text detection (DBNet). Input `x` [N,3,H,W]. ~9.9 MB.
-- `rec.onnx` — Text recognition (SVTR-LCNet + CTC). Input `x` [N,3,48,W], output
-  last dim **18710 = 18708 dict chars + blank(index 0) + trailing space**. ~21.2 MB.
-- `ppocrv6_dict.txt` — Character dictionary for CTC decoding, **18708 entries**.
-  Extracted verbatim from the rec model's `inference.yml` `character_dict`
-  (identical to PaddleOCR `ppocr/utils/dict/ppocrv6_dict.txt`). The pipeline reads
-  `numClasses` from the rec output at runtime, so no decode-code change is needed.
-- Direction classification (`cls.onnx`) is intentionally not used in this pipeline.
-  The small model build does not ship a cls model, and the UI is a two-stage
-  detection → recognition flow.
+- `det.onnx` — DBNet text detection. Input `x` [N,3,H,W]. ~9.9 MB.
+- `rec.onnx` — CTC recognition (SVTR-LCNet). Input `x` [N,3,48,W]; output last dim
+  **18710 = 18708 dict chars + blank (index 0) + trailing space**. ~21.2 MB.
+- `ppocrv6_dict.txt` — 18708-entry character dictionary, matching the rec model's own
+  `inference.yml` / `preprocessor_config.json` character list.
+- `cls.onnx` is intentionally unused: this build ships no direction classifier, and the UI is a
+  two-stage detect → recognise flow.
 
-## Language support — KNOWN ISSUE (non-ASCII)
+## Known issue: non-ASCII text
 
-> **Every non-ASCII script currently decodes as mojibake** (e.g. `本` → `æœ¬`, `é` →
-> `Ã©`): the released checkpoint transcribes non-ASCII glyphs as the CP1252 rendering of their
-> UTF-8 bytes, and several byte values are missing from the dictionary so the text cannot be
-> reconstructed downstream. ASCII/English decodes perfectly. This reproduces on PP-OCRv5 mobile,
-> on RapidAI's re-export of this model, and identically under Python onnxruntime and
-> onnxruntime-web; the ONNX head weight is byte-identical to the official `inference.pdiparams`.
-> Full evidence and a paste-ready upstream issue: [`docs/upstream-rec-non-ascii.md`](../../../docs/upstream-rec-non-ascii.md)
-> (repo-root `docs/`, not shipped with the site). `bun scripts/verify-rec-model.ts` reproduces.
->
-> Until upstream resolves this, treat the app as **English/ASCII-first**.
+**All non-ASCII scripts currently decode as mojibake** (`本` → `æœ¬`, `é` → `Ã©`): the released
+checkpoint emits each character's UTF-8 bytes rendered through CP1252, and 15 byte values have no
+dictionary entry, so those bytes are never emitted and the text cannot be reconstructed. ASCII is
+unaffected. Verified identical on PP-OCRv5 mobile, on RapidAI's re-export, and under both Python
+onnxruntime and onnxruntime-web; the ONNX head weight is byte-identical to the official
+`inference.pdiparams`.
 
-Nominal coverage (what the dictionary contains, pending the fix above): Simplified/Traditional
-Chinese, English, Japanese (incl. hiragana 86 + katakana 94), and 46 Latin-script languages
-(French, German, Spanish, Vietnamese, …), plus Greek. Dict has 15565 CJK ideographs.
+Evidence, a paste-ready upstream issue, and the reproducer
+(`bun scripts/verify-rec-model.ts`) are in
+[docs/upstream-rec-non-ascii.md](https://github.com/youming-ai/ocr/blob/main/docs/upstream-rec-non-ascii.md).
+Treat the app as **English/ASCII-first** until upstream resolves it.
 
-Not covered (need a PP-OCRv5 per-language rec model instead): Korean (Hangul),
-Cyrillic (Russian/…), Arabic, Devanagari (Hindi/…), Thai, Tamil, Telugu. Note: those
-per-language models were *not* affected in our spot checks (RapidOCR's regression suite covers
-them with exact non-ASCII assertions), so they are the likeliest fallback if a language-specific
-rec model is needed before the unified ones are fixed.
+Nominal dictionary coverage (pending the fix): Simplified/Traditional Chinese, English, Japanese
+(hiragana + katakana), 46 Latin-script languages, Greek — 15565 CJK ideographs. Not covered
+(needs a PP-OCRv5 per-language model): Korean, Cyrillic, Arabic, Devanagari, Thai, Tamil, Telugu.
 
 ## How to obtain
 
@@ -44,15 +36,14 @@ Official pre-exported ONNX on HuggingFace (no paddle2onnx conversion needed):
 base=https://huggingface.co/PaddlePaddle
 curl -L -o det.onnx "$base/PP-OCRv6_small_det_onnx/resolve/main/inference.onnx"
 curl -L -o rec.onnx "$base/PP-OCRv6_small_rec_onnx/resolve/main/inference.onnx"
-# dict lives in the rec repo's inference.yml (character_dict), or fetch:
+# the dict lives in the rec repo's inference.yml (character_dict), or fetch:
 curl -L -o ppocrv6_dict.txt \
   "https://raw.githubusercontent.com/PaddlePaddle/PaddleOCR/main/ppocr/utils/dict/ppocrv6_dict.txt"
 ```
 
-Other tiers: `PP-OCRv6_{tiny,medium}_{det,rec}_onnx`. Tiny's rec dict lacks kana
-(no Japanese); medium is larger/more accurate. When swapping rec + dict, bump
-`DB_VERSION` in `model-loader.ts` to invalidate cached models for returning users.
+Other tiers: `PP-OCRv6_{tiny,medium}_{det,rec}_onnx` (tiny's dict has no kana). When swapping
+rec or dict, bump `DB_VERSION` in `model-loader.ts` to invalidate cached models.
 
-Compatibility: input name `x`, height 48, normalization `(x/255 - 0.5)/0.5`, CTC
-blank at index 0 + trailing space — all matched by `preprocessor.ts` / `pipeline.ts`.
-Verify after any swap by OCR-ing a kana sample and confirming hiragana/katakana decode.
+Compatibility contract matched by `preprocessor.ts` / `pipeline.ts`: input name `x`, height 48,
+BGR channel order, detector `(x/255 − mean)/std` with the model's ImageNet constants, recogniser
+`(x/255 − 0.5)/0.5`, CTC blank at index 0 plus a trailing space.

@@ -4,7 +4,7 @@ Thank you for your interest in contributing to OCR! This document provides guide
 
 ## Development Setup
 
-- [Bun](https://bun.sh/) ≥ 1.3
+- [Bun](https://bun.sh/) ≥ 1.4
 - A modern browser with WebAssembly support
 
 ### Getting Started
@@ -41,6 +41,7 @@ Open http://localhost:5173 to see the app.
 | `bun run lint` | Run Biome linter |
 | `bun run lint:fix` | Fix lint issues |
 | `bun run format` | Format code |
+| `bun scripts/verify-rec-model.ts` | Run the recognition fixtures through the real decode path (`--guard` = ASCII-only check used by CI) |
 
 ## Code Style
 

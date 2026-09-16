@@ -45,7 +45,7 @@ Send an email to **ikashue@gmail.com** with:
 
 ### Input handling
 
-- The browser accepts only PNG, JPEG, WebP, BMP, TIFF, and PDF files.
+- The browser accepts only PNG, JPEG, WebP, BMP, and PDF files.
 - Images are limited to 10 MB; PDFs are limited to 200 MB.
 - PDF rendering is capped at 50 pages by default to bound browser memory usage.
 

@@ -19,7 +19,7 @@ The core OCR flow runs entirely in the browser, orchestrated by `OcrEngine` (`sr
 7. **Postprocessing**: `src/lib/ocr/postprocessor.ts` thresholds the DBNet probability map, drops boxes whose mean score is below `box_threshold` (0.45), applies the unclip ratio, then Non-Maximum Suppression, sorts coordinate regions, and decodes recognition scores into character strings using CTC greedy decoding. Defaults mirror the detector's published postprocess config (`thresh 0.2`, `box_thresh 0.45`, `unclip_ratio 1.4`).
 8. **Character Translation**: `OcrEngine` translates class indices using the embedded or external character dictionary (`ppocrv6_dict.txt`). The recognition model's class size must strictly match `dict length + 2` (prepended CTC blank index 0 and a trailing space; currently 18710 classes for 18708 dictionary entries).
 
-**Known limitation (do not "fix" locally)**: the shipped PP-OCRv6 rec checkpoint transcribes every non-ASCII character as the CP1252 rendering of its UTF-8 bytes (e.g. `本` → `æœ¬`), and several byte values are absent from the dictionary so the text is unrecoverable downstream. ASCII/English is unaffected. This is an upstream model issue — full evidence, a paste-ready issue, and the reproduction tool (`bun scripts/verify-rec-model.ts`, CI-guarded on ASCII via fixtures in `src/__tests__/fixtures/rec/`) are documented in `docs/upstream-rec-non-ascii.md`. Product copy must stay English-first until it is resolved.
+**Known limitation (do not "fix" locally)**: the shipped rec checkpoint emits non-ASCII characters as CP1252-rendered UTF-8 bytes (`本` → `æœ¬`), and missing dictionary entries make the text unrecoverable. ASCII is unaffected; product copy stays English-first. Details, reproducer (`bun scripts/verify-rec-model.ts`, CI-guarded via `src/__tests__/fixtures/rec/`) and upstream issue draft: `docs/upstream-rec-non-ascii.md`.
 
 ### Server & Deployment Layers
 The Hono backend API (`src/server/hono.ts`) is mounted at `/api` and serves `/health` (plus CORS, security headers, and request logging). It does not contain OCR business logic. `robots.txt`, `sitemap.xml`, and `llm.txt` are plain static files in `public/`, not API routes. The Hono router is mounted by three entrypoints:
@@ -53,6 +53,7 @@ Manage and run tasks via Bun:
 | `bun run format` | Runs Biome formatter on `src/` |
 | `bun test` | Runs the test suite |
 | `bun test <file>` | Runs a specific test file (e.g. `bun test src/__tests__/lib/ocr/pipeline.test.ts`) |
+| `bun scripts/verify-rec-model.ts` | Recognition fixtures through the real decode path (`--guard`: ASCII check used by CI) |
 
 *Note: the `postinstall` script copies ONNX SIMD WASM binaries and the PDF.js worker from `node_modules` into `public/`. If WASM or worker files 404 on fresh builds, execute `bun install`.*
 
