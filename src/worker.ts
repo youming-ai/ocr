@@ -2,7 +2,6 @@ import { app } from '~/server/hono';
 
 interface Env {
   PUBLIC_ORIGIN?: string;
-  LOG_LEVEL?: string;
   ASSETS?: Fetcher;
 }
 
