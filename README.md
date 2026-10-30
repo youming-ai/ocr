@@ -24,7 +24,7 @@ On-device OCR powered by PaddleOCR PP-OCRv6. Extract text from images and PDFs �
 
 ## 🚀 Quick start
 
-Requires **Bun ≥ 1.4**.
+Requires **Bun 1.4.4** (pinned in `package.json`).
 
 ```bash
 git clone https://github.com/youming-ai/ocr.git
@@ -39,7 +39,22 @@ bun run dev     # UI on http://localhost:5173, API proxy on :3001
 - **Framework**: React 19 + TanStack Router (CSR SPA)
 - **API**: Hono v4 at `/api/*` — health check and headers only, no OCR server-side
 - **Styling**: Tailwind CSS v4 with Vercel Geist tokens (light theme only)
-- **Tooling**: Bun, Biome v2, Vite 7, Bun test runner
+- **Tooling**: Bun, Biome v2, Vite 8, TypeScript 7, Bun test runner
+
+## Development checks
+
+```bash
+bun run routes:generate
+bun run lint
+bun run typecheck
+bun test --coverage
+bun scripts/verify-rec-model.ts --guard
+bun run build
+bun run check:worker  # local packaging check; does not deploy
+```
+
+CI reads the Bun version from `package.json` and uses the project-local Router CLI and Wrangler
+versions from `bun.lock`.
 
 ## 📦 Deploy
 

@@ -22,8 +22,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          # Keep in lockstep with package.json "packageManager".
-          bun-version: 1.4.0
+          bun-version-file: package.json
 
       - name: Cache node_modules
         uses: actions/cache@v4
@@ -40,7 +39,7 @@ jobs:
         run: bun run lint
 
       - name: Generate route tree
-        run: bunx @tanstack/router-cli generate
+        run: bun run routes:generate
 
       - name: Run typecheck
         run: bun run typecheck
@@ -58,6 +57,4 @@ jobs:
         run: bun run build
 
       - name: Validate Cloudflare Worker package
-        # Validate the Worker package is well-formed. `versions upload --dry-run`
-        # checks the same packaging step as production `wrangler deploy`.
-        run: bunx wrangler versions upload --dry-run --outdir /tmp/worker-dist
+        run: bun run check:worker --outdir /tmp/worker-dist
